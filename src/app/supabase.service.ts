@@ -7,13 +7,13 @@ import { Role } from './models/staff.interface';
 import { Service } from './models/service.interface';
 import { Category } from './models/category.interface';
 import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateAppointmentRequest } from './models/appointment.interface';
-import { ɵMetadataOverrider } from '@angular/core/testing';
 import { BlogPost, CreateBlogPostRequest, UpdateBlogPostRequest } from './models/blog.interface';
-import { Notification, CreateNotificationRequest } from './models/notification.interface';
-import { Receipt, CreateReceiptRequest, UpdateReceiptRequest } from './models/receipt.interface';
-import { PatientReport, CreatePatientReportRequest, UpdatePatientReportRequest } from './models/patient-report.interface';
-import { PeriodTracking, CreatePeriodTrackingRequest, UpdatePeriodTrackingRequest } from './models/period-tracking.interface';
+import { Notification } from './models/notification.interface';
+import { Receipt, UpdateReceiptRequest } from './models/receipt.interface';
+import { PatientReport, UpdatePatientReportRequest } from './models/patient-report.interface';
+import { PeriodTracking, UpdatePeriodTrackingRequest } from './models/period-tracking.interface';
 import { DoctorSlotAssignment, Slot, CreateDoctorSlotAssignmentRequest } from './models/slot.interface';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'

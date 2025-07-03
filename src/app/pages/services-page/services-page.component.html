@@ -1,0 +1,146 @@
+<app-header />
+<body class="bg-white">
+  <div
+    class="max-w-7xl mx-auto py-10 px-6 text-black bg-[#f8f8f8] min-h-screen"
+  >
+    <h2 class="text-2xl font-bold text-center mb-6 text-[#222e5c]">
+      How can we help you?
+    </h2>
+
+    <!-- Search -->
+    <div class="flex justify-center mb-6">
+      <input
+        type="text"
+        placeholder="Search services..."
+        class="w-2/3 px-4 py-2 rounded-full border border-gray-300 shadow"
+        (input)="onSearch($event)"
+        [value]="searchValue()"
+      />
+    </div>
+
+    <!-- Categories -->
+    <div class="flex flex-wrap gap-3 justify-center mb-8">
+      @for (cat of categories(); track cat) {
+      <button
+        (click)="selectCategory(cat)"
+        class="px-4 py-2 rounded-full border transition-all"
+        [ngClass]="
+          selectedCategory() === cat
+            ? 'bg-blue-100 border-blue-400 text-blue-700 font-bold'
+            : 'bg-white border-gray-300 text-gray-600 hover:bg-blue-50'
+        "
+      >
+        {{ cat }}
+      </button>
+      }
+    </div>
+
+    <!-- Skeleton loading -->
+    @if (loading()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+      @for (i of skeletons; track i) {
+      <div class="bg-white rounded-xl shadow p-4 flex flex-col animate-pulse">
+        <div class="w-full h-36 bg-gray-200 rounded-lg mb-4"></div>
+        <div class="h-5 bg-gray-200 rounded mb-2 w-2/3"></div>
+        <div class="h-4 bg-gray-200 rounded mb-2 w-3/4"></div>
+        <div class="flex items-center justify-between mt-3">
+          <div class="h-4 bg-gray-200 rounded w-16"></div>
+          <div class="h-7 w-20 bg-gray-200 rounded-full"></div>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+      @for (sv of paginatedServices; track sv.id) {
+      <div
+        class="bg-white rounded-xl shadow hover:shadow-lg transition-all p-4 flex flex-col cursor-pointer hover:-translate-y-1 duration-200"
+      >
+        <a
+          [routerLink]="['/service', sv.id]"
+          class="block"
+          style="text-decoration: none"
+        >
+          <img
+            [src]="
+              sv.image_link || 'https://placehold.co/400x200?text=No+Image'
+            "
+            class="w-full h-36 object-cover rounded-lg mb-4"
+            alt="{{ sv.name }}"
+          />
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              @if (sv.service_categories.category_name) {
+              <span
+                class="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-bold text-blue-700"
+              >
+                {{ sv.service_categories.category_name }}
+              </span>
+              }
+            </div>
+            <p
+              class="text-base text-[#245a8d] font-semibold mb-2 truncate-text"
+            >
+              {{ sv.name }}
+            </p>
+            <p class="text-gray-500 text-sm mb-2 truncate-text">
+              {{ limitText(sv.excerpt, 32) }}
+            </p>
+          </div>
+        </a>
+        <div class="flex items-center justify-between mt-3">
+          <span class="text-[#47B1E2] font-bold">{{
+            formatPrice(sv.price)
+          }}</span>
+          <button
+            class="px-3 py-1 bg-[#222e5c] text-white rounded-full text-sm hover:bg-[#47B1E2] transition cursor-pointer"
+            routerLink="/appointment"
+            (click)="bookService(sv, $event)"
+          >
+            Book now
+          </button>
+        </div>
+      </div>
+      } @if (paginatedServices.length === 0) {
+      <div class="col-span-full text-center text-gray-400 text-xl py-12">
+        No service found.
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Pagination -->
+    <div class="flex justify-center items-center gap-2 mt-6">
+      @if (page() !== 1) {
+      <button
+        (click)="goToPage(page() - 1)"
+        class="px-3 py-1 rounded border bg-white hover:bg-blue-50 transition"
+      >
+        Prev
+      </button>
+      } @else {
+      <button class="px-3 py-1 rounded border bg-white invisible">Prev</button>
+      } @for (p of pageArray; track p) {
+      <button
+        (click)="goToPage(p)"
+        [ngClass]="
+          page() === p ? 'bg-[#47B1E2] text-white font-bold' : 'bg-white'
+        "
+        class="px-3 py-1 rounded border border-blue-200 hover:bg-blue-100 transition w-12"
+      >
+        {{ p }}
+      </button>
+      } @if (page() !== maxPage) {
+      <button
+        (click)="goToPage(page() + 1)"
+        class="px-3 py-1 rounded border bg-white hover:bg-blue-50 transition"
+      >
+        Next
+      </button>
+      } @else {
+      <button class="px-3 py-1 rounded border bg-white invisible">Next</button>
+      }
+    </div>
+  </div>
+</body>
+<app-footer />
