@@ -21,3 +21,45 @@ export interface Role {
 
 export type StaffStatus = 'active' | 'inactive' | 'on_leave'; // Adjust based on staff_status enum values
 export type Gender = 'male' | 'female' | 'other'; // Adjust based on gender_enum values
+
+// Doctor Details Interface
+export interface DoctorDetails {
+  doctor_id: string;
+  department: string;
+  speciality: string;
+  about_me?: any;
+  license_no: string;
+  bio?: string;
+  slogan?: string;
+  educations?: any;
+  certifications?: any;
+}
+
+// Combined Doctor Interface
+export interface Doctor extends Staff {
+  doctor_details?: DoctorDetails;
+}
+
+// Enums for Doctor
+export enum Department {
+  CARDIOLOGY = 'cardiology',
+  DERMATOLOGY = 'dermatology',
+  ENDOCRINOLOGY = 'endocrinology',
+  GASTROENTEROLOGY = 'gastroenterology',
+  GYNECOLOGY = 'gynecology',
+  NEUROLOGY = 'neurology',
+  ONCOLOGY = 'oncology',
+  ORTHOPEDICS = 'orthopedics',
+  PEDIATRICS = 'pediatrics',
+  PSYCHIATRY = 'psychiatry',
+  RADIOLOGY = 'radiology',
+  SURGERY = 'surgery'
+}
+
+export enum Speciality {
+  GENERAL_MEDICINE = 'general_medicine',
+  FAMILY_MEDICINE = 'family_medicine',
+  INTERNAL_MEDICINE = 'internal_medicine',
+  EMERGENCY_MEDICINE = 'emergency_medicine',
+  PREVENTIVE_MEDICINE = 'preventive_medicine'
+}

@@ -1,15 +1,15 @@
-import { RouterModule } from '@angular/router';
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DoctorHeaderComponent } from '../header/header.component';
 import { DoctorSidebarComponent } from '../doctor-sidebar/doctor-sidebar.component';
-import { DoctorHeaderComponent } from '../doctor-header/doctor-header.component';
+import { RouterOutlet } from '@angular/router';
 
 
 
 @Component({
   selector: 'app-doctor-dashboard',
   standalone: true,
-  imports: [CommonModule, DoctorSidebarComponent, DoctorHeaderComponent, RouterModule],
+  imports: [CommonModule, DoctorHeaderComponent, DoctorSidebarComponent, RouterOutlet],
   templateUrl: './doctor-dashboard.component.html',
   styleUrls: ['./doctor-dashboard.component.css']
 })

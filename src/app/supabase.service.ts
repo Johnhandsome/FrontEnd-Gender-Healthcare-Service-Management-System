@@ -2,13 +2,18 @@ import { Patient } from './models/patient.interface';
 import { Injectable } from '@angular/core';
 import { supabase } from './supabase-client';
 import { from, Observable } from 'rxjs';
-import { Staff } from './models/staff.interface';
+import { Staff, DoctorDetails, Doctor } from './models/staff.interface';
 import { Role } from './models/staff.interface';
 import { Service } from './models/service.interface';
 import { Category } from './models/category.interface';
-import { exitCode } from 'node:process';
-import { Appointment, Guest, GuestAppointment } from './models/appointment.interface';
+import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateAppointmentRequest } from './models/appointment.interface';
 import { ɵMetadataOverrider } from '@angular/core/testing';
+import { BlogPost, CreateBlogPostRequest, UpdateBlogPostRequest } from './models/blog.interface';
+import { Notification, CreateNotificationRequest } from './models/notification.interface';
+import { Receipt, CreateReceiptRequest, UpdateReceiptRequest } from './models/receipt.interface';
+import { PatientReport, CreatePatientReportRequest, UpdatePatientReportRequest } from './models/patient-report.interface';
+import { PeriodTracking, CreatePeriodTrackingRequest, UpdatePeriodTrackingRequest } from './models/period-tracking.interface';
+import { DoctorSlotAssignment, Slot, CreateDoctorSlotAssignmentRequest } from './models/slot.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -455,7 +460,7 @@ export class SupabaseService {
   async getGuests(): Promise<Guest[]> {
     const { data, error } = await supabase
       .from('guests')
-      .select('guest_id');
+      .select('guest_id, full_name, phone, email, date_of_birth, gender, created_at');
     if (error) throw error;
     return data ?? [];
   }
@@ -610,9 +615,15 @@ export class SupabaseService {
       .select(`
         appointment_id,
         appointment_date,
+        appointment_time,
         appointment_status,
         visit_type,
-        patient:patients(full_name)
+        schedule,
+        message,
+        phone,
+        email,
+        patient:patients(full_name),
+        category:service_categories(category_name)
       `)
       .eq('doctor_id', doctor_id)
       .order('appointment_date', { ascending: false });
@@ -621,9 +632,418 @@ export class SupabaseService {
     return (data || []).map((appt: any) => ({
       appointment_id: appt.appointment_id,
       appointment_date: appt.appointment_date,
+      appointment_time: appt.appointment_time,
       appointment_status: appt.appointment_status,
       visit_type: appt.visit_type,
-      patient_name: appt.patient?.full_name || 'Unknown'
+      schedule: appt.schedule,
+      message: appt.message,
+      phone: appt.phone,
+      email: appt.email,
+      patient_name: appt.patient?.full_name || 'Unknown',
+      category_name: appt.category?.category_name || 'General'
     }));
   }
+
+  //#region // ============= DOCTOR SPECIFIC FUNCTIONS ============= //
+
+  // Get doctor details with staff information
+  async getDoctorDetails(doctor_id: string): Promise<Doctor | null> {
+    const { data, error } = await supabase
+      .from('staff_members')
+      .select(`
+        *,
+        doctor_details (*)
+      `)
+      .eq('staff_id', doctor_id)
+      .eq('role', 'doctor')
+      .single();
+
+    if (error) throw error;
+    return data ? {
+      ...data,
+      doctor_details: data.doctor_details
+    } : null;
+  }
+
+  // Update doctor profile
+  async updateDoctorProfile(doctor_id: string, staffData: Partial<Staff>, doctorData?: Partial<DoctorDetails>): Promise<void> {
+    // Update staff_members table
+    if (Object.keys(staffData).length > 0) {
+      const { error: staffError } = await supabase
+        .from('staff_members')
+        .update(staffData)
+        .eq('staff_id', doctor_id);
+      if (staffError) throw staffError;
+    }
+
+    // Update doctor_details table if provided
+    if (doctorData && Object.keys(doctorData).length > 0) {
+      const { error: doctorError } = await supabase
+        .from('doctor_details')
+        .update(doctorData)
+        .eq('doctor_id', doctor_id);
+      if (doctorError) throw doctorError;
+    }
+  }
+
+  // Get doctor's patients (patients who have appointments with this doctor)
+  async getDoctorPatients(doctor_id: string): Promise<Patient[]> {
+    const { data, error } = await supabase
+      .from('patients')
+      .select(`
+        *,
+        appointments!inner(doctor_id)
+      `)
+      .eq('appointments.doctor_id', doctor_id);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Get doctor notifications
+  async getDoctorNotifications(doctor_id: string): Promise<Notification[]> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select(`
+        *,
+        appointment:appointments(appointment_date, patient:patients(full_name))
+      `)
+      .eq('staff_id', doctor_id)
+      .order('sent_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((notif: any) => ({
+      ...notif,
+      title: this.getNotificationTitle(notif.notification_type),
+      message: this.getNotificationMessage(notif.notification_type, notif.appointment)
+    }));
+  }
+
+  private getNotificationTitle(type: string): string {
+    switch (type) {
+      case 'appointment_created': return 'New Appointment';
+      case 'appointment_updated': return 'Appointment Updated';
+      case 'appointment_cancelled': return 'Appointment Cancelled';
+      case 'appointment_reminder': return 'Appointment Reminder';
+      default: return 'Notification';
+    }
+  }
+
+  private getNotificationMessage(type: string, appointment: any): string {
+    const patientName = appointment?.patient?.full_name || 'Unknown Patient';
+    const appointmentDate = appointment?.appointment_date || 'Unknown Date';
+
+    switch (type) {
+      case 'appointment_created':
+        return `New appointment with ${patientName} on ${appointmentDate}`;
+      case 'appointment_updated':
+        return `Appointment with ${patientName} has been updated`;
+      case 'appointment_cancelled':
+        return `Appointment with ${patientName} has been cancelled`;
+      case 'appointment_reminder':
+        return `Reminder: Appointment with ${patientName} on ${appointmentDate}`;
+      default:
+        return 'You have a new notification';
+    }
+  }
+
+  // Blog Posts Management
+  async createBlogPost(doctor_id: string, blogData: CreateBlogPostRequest): Promise<BlogPost> {
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .insert([{
+        doctor_id,
+        ...blogData,
+        published_at: blogData.blog_status === 'published' ? new Date().toISOString() : null
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateBlogPost(blogData: UpdateBlogPostRequest): Promise<void> {
+    const updateData: any = { ...blogData };
+    delete updateData.blog_id;
+
+    if (blogData.blog_status === 'published' && !updateData.published_at) {
+      updateData.published_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('blog_posts')
+      .update(updateData)
+      .eq('blog_id', blogData.blog_id);
+
+    if (error) throw error;
+  }
+
+  async deleteBlogPost(blog_id: string): Promise<void> {
+    const { error } = await supabase
+      .from('blog_posts')
+      .delete()
+      .eq('blog_id', blog_id);
+
+    if (error) throw error;
+  }
+
+  // Receipts Management
+  async getDoctorReceipts(doctor_id: string): Promise<Receipt[]> {
+    // First get patient IDs for this doctor
+    const { data: appointmentData, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('patient_id')
+      .eq('doctor_id', doctor_id);
+
+    if (appointmentError) throw appointmentError;
+
+    const patientIds = appointmentData?.map(a => a.patient_id).filter(Boolean) || [];
+
+    if (patientIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('receipts')
+      .select(`
+        *,
+        patient:patients(full_name)
+      `)
+      .in('patient_id', patientIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((receipt: any) => ({
+      ...receipt,
+      patient_name: receipt.patient?.full_name || 'Unknown Patient'
+    }));
+  }
+
+  async updateReceiptStatus(receipt_id: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('receipts')
+      .update({ status })
+      .eq('receipt_id', receipt_id);
+
+    if (error) throw error;
+  }
+
+  // Patient Reports Management
+  async getDoctorPatientReports(doctor_id: string): Promise<PatientReport[]> {
+    const { data, error } = await supabase
+      .from('patient_reports')
+      .select(`
+        *,
+        patient:patients(full_name)
+      `)
+      .eq('staff_id', doctor_id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((report: any) => ({
+      ...report,
+      patient_name: report.patient?.full_name || 'Unknown Patient'
+    }));
+  }
+
+  async createPatientReport(doctor_id: string, reportData: CreatePatientReportRequest): Promise<PatientReport> {
+    const { data, error } = await supabase
+      .from('patient_reports')
+      .insert([{
+        staff_id: doctor_id,
+        ...reportData
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updatePatientReport(reportData: UpdatePatientReportRequest): Promise<void> {
+    const updateData: any = { ...reportData };
+    delete updateData.report_id;
+
+    const { error } = await supabase
+      .from('patient_reports')
+      .update(updateData)
+      .eq('report_id', reportData.report_id);
+
+    if (error) throw error;
+  }
+
+  // Period Tracking Management
+  async getPatientPeriodTracking(patient_id: string): Promise<PeriodTracking[]> {
+    const { data, error } = await supabase
+      .from('period_tracking')
+      .select(`
+        *,
+        patient:patients(full_name)
+      `)
+      .eq('patient_id', patient_id)
+      .order('start_date', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((period: any) => ({
+      ...period,
+      patient_name: period.patient?.full_name || 'Unknown Patient'
+    }));
+  }
+
+  async createPeriodTracking(trackingData: CreatePeriodTrackingRequest): Promise<PeriodTracking> {
+    const { data, error } = await supabase
+      .from('period_tracking')
+      .insert([trackingData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updatePeriodTracking(trackingData: UpdatePeriodTrackingRequest): Promise<void> {
+    const updateData: any = { ...trackingData };
+    delete updateData.period_id;
+
+    const { error } = await supabase
+      .from('period_tracking')
+      .update(updateData)
+      .eq('period_id', trackingData.period_id);
+
+    if (error) throw error;
+  }
+
+  // Appointment Management for Doctors
+  async createAppointment(appointmentData: CreateAppointmentRequest): Promise<Appointment> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert([appointmentData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateAppointmentStatus(appointmentData: UpdateAppointmentRequest): Promise<void> {
+    const updateData: any = { ...appointmentData };
+    delete updateData.appointment_id;
+    updateData.updated_at = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('appointments')
+      .update(updateData)
+      .eq('appointment_id', appointmentData.appointment_id);
+
+    if (error) throw error;
+  }
+
+  // Dashboard Statistics for Doctors
+  async getDoctorDashboardStats(doctor_id: string) {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get today's appointments count
+    const { data: todayAppointments, error: todayError } = await supabase
+      .from('appointments')
+      .select('appointment_id')
+      .eq('doctor_id', doctor_id)
+      .eq('appointment_date', today);
+
+    if (todayError) throw todayError;
+
+    // Get pending appointments count
+    const { data: pendingAppointments, error: pendingError } = await supabase
+      .from('appointments')
+      .select('appointment_id')
+      .eq('doctor_id', doctor_id)
+      .eq('appointment_status', 'pending');
+
+    if (pendingError) throw pendingError;
+
+    // Get total patients count
+    const { data: totalPatients, error: patientsError } = await supabase
+      .from('appointments')
+      .select('patient_id')
+      .eq('doctor_id', doctor_id)
+      .not('patient_id', 'is', null);
+
+    if (patientsError) throw patientsError;
+
+    // Get unique patients count
+    const uniquePatients = new Set(totalPatients?.map(p => p.patient_id)).size;
+
+    // Get recent appointments
+    const { data: recentAppointments, error: recentError } = await supabase
+      .from('appointments')
+      .select(`
+        appointment_id,
+        appointment_date,
+        appointment_time,
+        appointment_status,
+        visit_type,
+        patient:patients(full_name)
+      `)
+      .eq('doctor_id', doctor_id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (recentError) throw recentError;
+
+    return {
+      todayAppointments: todayAppointments?.length || 0,
+      pendingAppointments: pendingAppointments?.length || 0,
+      totalPatients: uniquePatients,
+      recentAppointments: (recentAppointments || []).map((appt: any) => ({
+        ...appt,
+        patient_name: appt.patient?.full_name || 'Unknown Patient'
+      }))
+    };
+  }
+
+  // Get doctor services
+  async getDoctorServices(doctor_id: string) {
+    const { data, error } = await supabase
+      .from('doctor_services')
+      .select(`
+        *,
+        service:medical_services(
+          service_id,
+          service_name,
+          service_description,
+          service_cost,
+          duration_minutes,
+          category:service_categories(category_name)
+        )
+      `)
+      .eq('doctor_id', doctor_id);
+
+    if (error) throw error;
+    return (data || []).map((ds: any) => ({
+      ...ds.service,
+      category_name: ds.service?.category?.category_name || 'General'
+    }));
+  }
+
+  // Add service to doctor
+  async addDoctorService(doctor_id: string, service_id: string): Promise<void> {
+    const { error } = await supabase
+      .from('doctor_services')
+      .insert([{ doctor_id, service_id }]);
+
+    if (error) throw error;
+  }
+
+  // Remove service from doctor
+  async removeDoctorService(doctor_id: string, service_id: string): Promise<void> {
+    const { error } = await supabase
+      .from('doctor_services')
+      .delete()
+      .eq('doctor_id', doctor_id)
+      .eq('service_id', service_id);
+
+    if (error) throw error;
+  }
+
+  //#endregion
 }
