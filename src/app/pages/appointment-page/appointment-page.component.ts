@@ -3,7 +3,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { ContactMessage } from '../../models/user.model';
 import { HeaderComponent } from '../../components/header/header.component';
 import { FooterComponent } from '../../components/footer/footer.component';
-import { SupabaseService } from '../../Services/supabase.service';
+import { CustomerSupabaseService } from '../../Services/customer-supabase.service';
 
 @Component({
   selector: 'app-appointment-page',
@@ -21,7 +21,7 @@ export class AppointmentPageComponent implements OnInit {
   // Bind cho form
   contactData: Partial<ContactMessage> = {};
 
-  private supabaseService = inject(SupabaseService);
+  private supabaseService = inject(CustomerSupabaseService);
 
   ngOnInit() {
     // 1. Nếu có Remember-contact-form thì lấy tất cả data đã lưu

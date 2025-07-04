@@ -2,19 +2,19 @@ import { Injectable } from '@angular/core';
 import { CanActivate, Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
-export class DoctorAuthGuard implements CanActivate {
+export class AdminAuthGuard implements CanActivate {
   constructor(private router: Router) {}
 
   canActivate(): boolean {
     const role = localStorage.getItem('role');
-    const doctorId = localStorage.getItem('doctor_id') || localStorage.getItem('staff_id');
-
-    if (role === 'doctor' && doctorId) {
+    const staffId = localStorage.getItem('staff_id');
+    
+    if (role === 'admin' || role === 'manager') {
       return true;
     }
-
-    // Redirect to doctor login if not authenticated
-    this.router.navigate(['/doctor/login']);
+    
+    // Redirect to admin login if not authenticated
+    this.router.navigate(['/admin/login']);
     return false;
   }
 }

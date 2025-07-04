@@ -9,7 +9,7 @@ const supabaseKey =
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 @Injectable({ providedIn: 'root' })
-export class SupabaseService {
+export class CustomerSupabaseService {
   private http = inject(HttpClient);
   async callRpc<T = any>(
     funcName: string,

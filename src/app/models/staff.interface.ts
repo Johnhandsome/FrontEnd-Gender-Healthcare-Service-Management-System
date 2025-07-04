@@ -2,6 +2,7 @@ export interface Staff {
   staff_id: string;
   full_name: string;
   working_email: string;
+  email?: string; // Alternative email field
   role: string; // Assuming staff_role_enum is a string-based enum
   years_experience?: number;
   hired_at: string; // Date will be handled as string from Supabase
@@ -12,6 +13,7 @@ export interface Staff {
   image_link?: string;
   gender?: string; // Assuming gender_enum is a string-based enum
   languages?: string[];
+  password?: string; // For authentication (should be hashed in production)
 }
 
 export interface Role {

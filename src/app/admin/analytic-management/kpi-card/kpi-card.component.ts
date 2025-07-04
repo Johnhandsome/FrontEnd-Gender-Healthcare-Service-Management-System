@@ -1,13 +1,14 @@
 // kpi-card.component.ts
 import { Component, OnInit } from '@angular/core';
 import { SupabaseService } from '../../../supabase.service';
-import { NgChartsModule } from 'ng2-charts';
+// Temporarily commented out until dependencies are properly installed
+// import { NgChartsModule } from 'ng2-charts';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-kpi-card',
   standalone: true,
-  imports: [CommonModule, NgChartsModule],
+  imports: [CommonModule], // NgChartsModule temporarily removed
   templateUrl: './kpi-card.component.html',
   styleUrl: './kpi-card.component.css',
 })

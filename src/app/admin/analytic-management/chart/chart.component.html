@@ -2,23 +2,19 @@
   <!-- Age Distribution Pie Chart -->
   <div class="bg-white rounded-xl shadow p-4 flex flex-col items-center">
     <h2 class="font-semibold mb-2">Age Distribution</h2>
-    <canvas baseChart
-      [data]="ageDistChartData"
-      [type]="'pie'"
-      [options]="pieChartOptions"
-      [legend]="true">
-    </canvas>
+    <!-- Chart temporarily disabled until ng2-charts is properly installed -->
+    <div class="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+      <p class="text-gray-500">Age Distribution Chart</p>
+    </div>
   </div>
 
   <!-- Gender Distribution Pie Chart -->
   <div class="bg-white rounded-xl shadow p-4 flex flex-col items-center">
     <h2 class="font-semibold mb-2">Gender Distribution</h2>
-    <canvas baseChart
-      [data]="genderDistChartData"
-      [type]="'pie'"
-      [options]="pieChartOptions"
-      [legend]="true">
-    </canvas>
+    <!-- Chart temporarily disabled until ng2-charts is properly installed -->
+    <div class="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+      <p class="text-gray-500">Gender Distribution Chart</p>
+    </div>
   </div>
 
   <!-- Cancelled Rate Progress -->

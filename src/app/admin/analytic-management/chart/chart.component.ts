@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { NgChartsModule } from 'ng2-charts';
+// Temporarily commented out until dependencies are properly installed
+// import { NgChartsModule } from 'ng2-charts';
 import { CommonModule, getLocaleNumberSymbol } from '@angular/common';
 import { SupabaseService } from '../../../supabase.service';
 
@@ -7,7 +8,7 @@ import { SupabaseService } from '../../../supabase.service';
 @Component({
   selector: 'app-chart',
   standalone: true,
-  imports: [CommonModule, NgChartsModule],
+  imports: [CommonModule], // NgChartsModule temporarily removed
   templateUrl: './chart.component.html',
   styleUrl: './chart.component.css',
 })

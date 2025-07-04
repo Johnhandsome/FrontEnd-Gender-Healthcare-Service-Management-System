@@ -23,6 +23,12 @@ import { AnalyticManagementComponent } from './admin/analytic-management/analyti
 // Doctor components
 import { DoctorDashboardComponent } from './doctor/doctor-dashboard/doctor-dashboard.component';
 
+// Auth components and guards
+import { AdminLoginComponent } from './admin/login/admin-login.component';
+import { DoctorLoginComponent } from './doctor/login/doctor-login.component';
+import { AdminAuthGuard } from './admin/admin-auth.guard';
+import { DoctorAuthGuard } from './doctor/doctor-auth.guard';
+
 export const routes: Routes = [
   // Customer-facing routes (public website)
   { path: '', component: HomePageComponent, data: { breadcrumb: 'Home' } },
@@ -36,20 +42,27 @@ export const routes: Routes = [
   { path: 'blog/:id', component: BlogDetailComponent, data: { breadcrumb: '...' } },
   { path: 'services', component: ServicePageComponent, data: { breadcrumb: 'Services' } },
 
-  // Admin routes (management system)
-  { path: 'admin/dashboard', component: DashboardComponent },
-  { path: 'admin/analytic', component: AnalyticManagementComponent },
-  { path: 'admin/patient', component: PatientManagementComponent },
-  { path: 'admin/staff', component: StaffManagementComponent },
-  { path: 'admin/appointment', component: AppointmentManagementComponent },
-  { path: 'admin/services', component: ServiceManagementComponent },
+  // Admin authentication
+  { path: 'admin/login', component: AdminLoginComponent },
 
-  // Doctor routes (doctor portal)
-  { path: 'doctor/dashboard', component: DoctorDashboardComponent },
+  // Admin routes (management system) - protected by auth guard
+  { path: 'admin/dashboard', component: DashboardComponent, canActivate: [AdminAuthGuard] },
+  { path: 'admin/analytic', component: AnalyticManagementComponent, canActivate: [AdminAuthGuard] },
+  { path: 'admin/patient', component: PatientManagementComponent, canActivate: [AdminAuthGuard] },
+  { path: 'admin/staff', component: StaffManagementComponent, canActivate: [AdminAuthGuard] },
+  { path: 'admin/appointment', component: AppointmentManagementComponent, canActivate: [AdminAuthGuard] },
+  { path: 'admin/services', component: ServiceManagementComponent, canActivate: [AdminAuthGuard] },
+
+  // Doctor authentication
+  { path: 'doctor/login', component: DoctorLoginComponent },
+
+  // Doctor routes (doctor portal) - protected by auth guard
+  { path: 'doctor/dashboard', component: DoctorDashboardComponent, canActivate: [DoctorAuthGuard] },
 
   // Redirects for compatibility
   { path: 'doctor', redirectTo: '/doctors', pathMatch: 'full' }, // Redirect old doctor route to customer-facing doctors
   { path: 'service', redirectTo: '/services', pathMatch: 'full' }, // Redirect old service route to customer-facing services
+  { path: 'admin', redirectTo: '/admin/login', pathMatch: 'full' }, // Redirect /admin to login
 
   // Default redirect - go to customer home page instead of admin
   { path: '**', redirectTo: '/', pathMatch: 'full' }

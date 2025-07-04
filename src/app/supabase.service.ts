@@ -10,8 +10,8 @@ import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateA
 import { BlogPost, CreateBlogPostRequest, UpdateBlogPostRequest } from './models/blog.interface';
 import { Notification } from './models/notification.interface';
 import { Receipt, UpdateReceiptRequest } from './models/receipt.interface';
-import { PatientReport, UpdatePatientReportRequest } from './models/patient-report.interface';
-import { PeriodTracking, UpdatePeriodTrackingRequest } from './models/period-tracking.interface';
+import { PatientReport, UpdatePatientReportRequest, CreatePatientReportRequest } from './models/patient-report.interface';
+import { PeriodTracking, UpdatePeriodTrackingRequest, CreatePeriodTrackingRequest } from './models/period-tracking.interface';
 import { DoctorSlotAssignment, Slot, CreateDoctorSlotAssignmentRequest } from './models/slot.interface';
 import { HttpClient } from '@angular/common/http';
 
@@ -1046,4 +1046,21 @@ export class SupabaseService {
   }
 
   //#endregion
+
+  // Authentication methods
+  async getStaffByEmail(email: string): Promise<Staff | null> {
+    const { data, error } = await supabase
+      .from('staff_members')
+      .select('*')
+      .or(`working_email.eq.${email},email.eq.${email}`)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No user found
+      }
+      throw error;
+    }
+    return data as Staff;
+  }
 }

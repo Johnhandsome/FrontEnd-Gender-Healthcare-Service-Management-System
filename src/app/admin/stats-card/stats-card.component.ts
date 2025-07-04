@@ -1,4 +1,4 @@
-import { error } from 'console';
+
 import { SupabaseService } from '../../supabase.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';

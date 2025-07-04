@@ -1,5 +1,8 @@
-import { AuthConfig } from 'angular-oauth2-oidc';
+// Temporarily commented out until dependencies are properly installed
+// import { AuthConfig } from 'angular-oauth2-oidc';
 
+// Temporarily commented out until dependencies are properly installed
+/*
 export const authConfig: AuthConfig = {
   issuer: 'https://accounts.google.com',
 
@@ -12,3 +15,4 @@ export const authConfig: AuthConfig = {
 
   strictDiscoveryDocumentValidation: false,
 };
+*/
