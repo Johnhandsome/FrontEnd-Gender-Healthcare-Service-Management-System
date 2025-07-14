@@ -5,8 +5,6 @@ import { SupabaseService } from '../../supabase.service';
 import { PatientSearchBarComponent } from './patient-search-bar/patient-search-bar.component';
 import { PatientTableComponent } from './patient-table/patient-table.component';
 import { Patient } from '../../models/patient.interface';
-import { HeaderComponent } from '../header/header.component';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 
 @Component({
   selector: 'app-patient-management',
