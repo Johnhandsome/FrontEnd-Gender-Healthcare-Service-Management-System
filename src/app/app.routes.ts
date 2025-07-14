@@ -16,6 +16,7 @@ import { DebugSupabaseComponent } from './debug-supabase.component';
 // Admin Layout Components
 import { AdminLayoutComponent } from './admin/admin-layout/admin-layout.component';
 import { DashboardContentComponent } from './admin/dashboard-content/dashboard-content.component';
+import { AnalyticsContentComponent } from './admin/analytics-content/analytics-content.component';
 
 // Doctor components
 import { DoctorDashboardComponent } from './doctor/doctor-dashboard/doctor-dashboard.component';
@@ -42,14 +43,22 @@ export const routes: Routes = [
   // Debug tools
   { path: 'debug', component: DebugSupabaseComponent },
 
-  // Admin routes (management system) - protected by auth guard
-  { path: 'admin/dashboard', component: DashboardComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/analytic', component: AnalyticManagementComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/patient', component: PatientManagementComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/staff', component: StaffManagementComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/appointment', component: AppointmentManagementComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/services', component: ServiceManagementComponent, canActivate: [AdminAuthGuard] },
-  { path: 'admin/database-init', component: DatabaseInitComponent }, // No auth guard for database init
+  // Admin routes (management system) - protected by auth guard with layout
+  {
+    path: 'admin',
+    component: AdminLayoutComponent,
+    canActivate: [AdminAuthGuard],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: DashboardContentComponent },
+      { path: 'analytic', component: AnalyticsContentComponent },
+      { path: 'patient', component: PatientManagementComponent },
+      { path: 'staff', component: StaffManagementComponent },
+      { path: 'appointment', component: AppointmentManagementComponent },
+      { path: 'services', component: ServiceManagementComponent },
+      { path: 'database-init', component: DatabaseInitComponent }
+    ]
+  },
 
   // Doctor routes (doctor portal) - protected by auth guard
   {
@@ -68,7 +77,6 @@ export const routes: Routes = [
   },
 
   // Redirects for compatibility - all roles use unified login
-  { path: 'admin', redirectTo: '/login', pathMatch: 'full' }, // Redirect /admin to unified login
   { path: 'admin/login', redirectTo: '/login', pathMatch: 'full' }, // Redirect old admin login to unified login
   { path: 'doctor', redirectTo: '/login', pathMatch: 'full' }, // Redirect /doctor to unified login
   { path: 'doctor/login', redirectTo: '/login', pathMatch: 'full' }, // Redirect old doctor login to unified login

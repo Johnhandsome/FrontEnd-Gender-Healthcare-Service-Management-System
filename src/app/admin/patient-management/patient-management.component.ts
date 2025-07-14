@@ -9,7 +9,7 @@ import { Patient } from '../../models/patient.interface';
 @Component({
   selector: 'app-patient-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, PatientSearchBarComponent, PatientTableComponent, HeaderComponent, SidebarComponent],
+  imports: [CommonModule, FormsModule, PatientSearchBarComponent, PatientTableComponent],
   templateUrl: './patient-management.component.html',
   styleUrls: ['./patient-management.component.css']
 })
