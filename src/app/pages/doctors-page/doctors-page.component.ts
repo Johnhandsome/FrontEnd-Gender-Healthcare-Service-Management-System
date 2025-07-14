@@ -57,9 +57,9 @@ export class DoctorsPageComponent implements OnInit {
         this.allDoctors = data;
         // get unique specialties
         const uniqueSpecialties = Array.from(
-          new Set(data.map((doc) => doc.speciality).filter(Boolean))
+          new Set(data.map((doc: any) => doc.speciality).filter(Boolean))
         );
-        this.specialties = ['All', ...uniqueSpecialties];
+        this.specialties = ['All', ...Array.from(uniqueSpecialties) as string[]];
         this.page = 1;
         this.updatePagination();
         this.loading = false;

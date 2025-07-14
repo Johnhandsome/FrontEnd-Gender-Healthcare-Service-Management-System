@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { DoctorHeaderComponent } from "../header/header.component";
 
 @Component({
   selector: 'app-doctor-sidebar',
   standalone: true,
-  imports: [RouterModule, DoctorHeaderComponent],
+  imports: [RouterModule],
   templateUrl: './doctor-sidebar.component.html',
   styleUrls: ['./doctor-sidebar.component.css']
 })

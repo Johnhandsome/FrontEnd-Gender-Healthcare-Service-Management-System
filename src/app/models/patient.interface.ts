@@ -5,6 +5,8 @@ export interface Patient {
   email: string;
   date_of_birth: string | null;
   gender: string;
+  address?: string;
+  emergency_contact?: string;
   allergies: Record<string, string> | string[] | null;
   chronic_conditions: Record<string, string> | string[] | null;
   past_surgeries: Record<string, string> | string[] | null;

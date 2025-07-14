@@ -144,7 +144,7 @@ export class StaffManagementComponent implements OnInit {
         hired_at: this.selectedStaff.hired_at,
         languages: this.languagesInput ? this.languagesInput.split(',').map(lang => lang.trim()).filter(lang => lang) : []
       };
-      await this.supabaseService.updateStaffMember(updatedStaff);
+      await this.supabaseService.updateStaffMember(updatedStaff.staff_id, updatedStaff);
       const index = this.staffMembers.findIndex(s => s.staff_id === updatedStaff.staff_id);
       if (index !== -1) {
         this.staffMembers[index] = updatedStaff;

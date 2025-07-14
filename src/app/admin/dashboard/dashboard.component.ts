@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { StatsCardComponent } from '../stats-card/stats-card.component';
 import { MainPanelsComponent } from '../main-panels/main-panels.component';
 import { HeaderComponent } from "../header/header.component";
 import { SidebarComponent } from "../sidebar/sidebar.component";
+import { SupabaseService } from '../../supabase.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -11,8 +12,30 @@ import { SidebarComponent } from "../sidebar/sidebar.component";
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent {
-  notifications: any[] = []; // Replace 'any' with your notification type if available
+export class DashboardComponent implements OnInit {
+  notifications: any[] = [];
+  dashboardStats: any = {};
+  recentActivities: any[] = [];
+  isLoading = false;
+
+  constructor(private supabaseService: SupabaseService) {}
+
+  async ngOnInit() {
+    this.isLoading = true;
+    try {
+      // Load dashboard statistics
+      this.dashboardStats = await this.supabaseService.getAdminDashboardStats();
+
+      // Load recent activities
+      this.recentActivities = await this.supabaseService.getRecentActivities();
+
+      console.log('Dashboard loaded successfully:', this.dashboardStats);
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
 
   trackByNotificationId(index: number, notification: any) {
     return notification.notification_id ?? index;

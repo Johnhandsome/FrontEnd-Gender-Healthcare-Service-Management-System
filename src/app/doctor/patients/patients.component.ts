@@ -210,7 +210,7 @@ export class PatientsComponent implements OnInit {
     }
   }
 
-  calculateAge(dateOfBirth: string): number {
+  calculateAge(dateOfBirth: string | null): number {
     if (!dateOfBirth) return 0;
     const today = new Date();
     const birthDate = new Date(dateOfBirth);

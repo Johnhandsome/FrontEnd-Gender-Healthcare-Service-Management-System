@@ -54,7 +54,7 @@ export class ForgotPasswordComponent {
     }
     this.isLoading.set(true);
     this.userService
-      .resetPassword(this.phone(), this.otp(), this.newPassword())
+      .resetPassword({ phone: this.phone(), otp: this.otp(), newPassword: this.newPassword() })
       .subscribe({
         next: () => {
           this.successMsg.set(

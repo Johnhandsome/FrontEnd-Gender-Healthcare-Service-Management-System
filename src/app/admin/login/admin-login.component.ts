@@ -18,6 +18,13 @@ import { SupabaseService } from '../../supabase.service';
           <p class="text-gray-600 text-sm">Sign in to manage the system</p>
         </div>
 
+        <!-- Demo Credentials -->
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm mb-6">
+          <p class="font-semibold mb-2">🔑 Demo Credentials:</p>
+          <p><strong>Admin:</strong> admin&#64;gendercare.com / admin123</p>
+          <p><strong>Manager:</strong> manager&#64;gendercare.com / manager123</p>
+        </div>
+
         <!-- Login Form -->
         <form #form="ngForm" (ngSubmit)="onSubmit(form)" class="space-y-6">
           <!-- Email Field -->

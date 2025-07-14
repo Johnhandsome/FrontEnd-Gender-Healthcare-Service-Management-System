@@ -18,6 +18,13 @@ import { SupabaseService } from '../../supabase.service';
           <p class="text-gray-600 text-sm">Access your practice dashboard</p>
         </div>
 
+        <!-- Demo Credentials -->
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm mb-6">
+          <p class="font-semibold mb-2">🔑 Demo Credentials:</p>
+          <p><strong>Dr. Kisma (Sugma):</strong> Kisma&#64;example.com / 123456</p>
+          <p class="text-xs mt-2 text-green-600">✅ Connected to real database with demo authentication</p>
+        </div>
+
         <!-- Login Form -->
         <form #form="ngForm" (ngSubmit)="onSubmit(form)" class="space-y-6">
           <!-- Email Field -->
@@ -81,6 +88,7 @@ import { SupabaseService } from '../../supabase.service';
           <button
             type="submit"
             [disabled]="isSubmitting"
+            (click)="onButtonClick()"
             class="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
           >
             <span *ngIf="!isSubmitting">Sign In</span>
@@ -122,7 +130,19 @@ export class DoctorLoginComponent {
   showPassword = false;
   errorMessage = '';
 
+  constructor() {
+    console.log('🏥 DoctorLoginComponent initialized');
+  }
+
+  onButtonClick() {
+    console.log('🖱️ Submit button clicked!');
+  }
+
   async onSubmit(form: NgForm) {
+    console.log('🚀 Form submission triggered!');
+    console.log('📋 Form data:', form.value);
+    console.log('✅ Form valid:', form.valid);
+
     this.formSubmitted = true;
     this.errorMessage = '';
 
@@ -131,27 +151,40 @@ export class DoctorLoginComponent {
       const { email, password } = form.value;
 
       try {
-        // Check if user exists in staff_members table with doctor role
+        console.log('🔍 Login attempt:', { email, password });
+
+        // Real database authentication
         const staff = await this.supabaseService.getStaffByEmail(email);
+        console.log('👤 Staff found:', staff);
 
         if (!staff || staff.role !== 'doctor') {
+          console.log('❌ Access denied - not a doctor or staff not found');
           this.errorMessage = 'Access denied. Doctor credentials required.';
           this.isSubmitting = false;
           return;
         }
 
-        // For demo purposes, we'll use a simple password check
-        // In production, you should use proper password hashing
-        if (password === 'doctor123' || staff.password === password) {
+        console.log('✅ Doctor role confirmed');
+
+        // Demo authentication logic - in production, use proper password hashing
+        const isValidPassword = this.validateDemoPassword(staff.working_email, password);
+        console.log('🔑 Password validation result:', isValidPassword);
+
+        if (isValidPassword) {
+          console.log('✅ Authentication successful, setting session...');
+
           // Set doctor session
           localStorage.setItem('role', 'doctor');
           localStorage.setItem('doctor_id', staff.staff_id);
           localStorage.setItem('staff_id', staff.staff_id);
           localStorage.setItem('user_name', staff.full_name);
+          localStorage.setItem('user_email', staff.working_email);
 
+          console.log('🚀 Redirecting to dashboard...');
           // Redirect to doctor dashboard
           this.router.navigate(['/doctor/dashboard']);
         } else {
+          console.log('❌ Password validation failed');
           this.errorMessage = 'Invalid email or password';
         }
       } catch (error: any) {
@@ -160,5 +193,28 @@ export class DoctorLoginComponent {
         this.isSubmitting = false;
       }
     }
+  }
+
+  /**
+   * Demo password validation - in production, use proper authentication
+   * Currently supports the test account: Kisma@example.com / 123456
+   */
+  private validateDemoPassword(email: string, password: string): boolean {
+    console.log('🔑 validateDemoPassword called with:', { email, password });
+
+    // Demo credentials for development
+    const demoCredentials = {
+      'Kisma@example.com': '123456'
+    };
+
+    console.log('📋 Available demo credentials:', demoCredentials);
+    console.log('🔍 Looking for email:', email);
+    console.log('🔍 Expected password for this email:', demoCredentials[email as keyof typeof demoCredentials]);
+    console.log('🔍 Provided password:', password);
+
+    const result = demoCredentials[email as keyof typeof demoCredentials] === password;
+    console.log('✅ Password match result:', result);
+
+    return result;
   }
 }

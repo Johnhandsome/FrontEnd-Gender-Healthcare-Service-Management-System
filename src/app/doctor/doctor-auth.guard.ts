@@ -9,10 +9,20 @@ export class DoctorAuthGuard implements CanActivate {
     const role = localStorage.getItem('role');
     const doctorId = localStorage.getItem('doctor_id') || localStorage.getItem('staff_id');
 
+    console.log('🛡️ DoctorAuthGuard checking:', {
+      role,
+      doctorId,
+      hasRole: !!role,
+      hasDoctorId: !!doctorId,
+      roleIsDoctor: role === 'doctor'
+    });
+
     if (role === 'doctor' && doctorId) {
+      console.log('✅ DoctorAuthGuard: Access granted');
       return true;
     }
 
+    console.log('❌ DoctorAuthGuard: Access denied, redirecting to login');
     // Redirect to doctor login if not authenticated
     this.router.navigate(['/doctor/login']);
     return false;

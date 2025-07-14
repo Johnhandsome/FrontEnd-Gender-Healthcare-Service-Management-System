@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../supabase.service';
 import { AppointmentSearchBarComponent } from './appointment-search-bar/appointment-search-bar.component';
-import {  } from '../../models/appointment.interface';
 import { Patient } from '../../models/patient.interface';
 import { AppointmentTableComponent } from './appointment-table/appointment-table.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -27,21 +26,21 @@ export class AppointmentManagementComponent implements OnInit {
   currentPage: number = 1;
   readonly pageSize: number = 10;
 
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private supabaseService: SupabaseService
+  ) {}
 
   async ngOnInit() {
     this.isLoading = true;
     try {
-      const [appointments, guestAppointments, patients, guests] = await Promise.all([
-        this.supabaseService.getAppointments(),
-        this.supabaseService.getGuestAppointments(),
-        this.supabaseService.getPatientAppointment(),
-        this.supabaseService.getGuests()
-      ]);
+      // Use SupabaseService methods that actually exist
+      const today = new Date().toISOString().split('T')[0];
+      const appointments = await this.supabaseService.getTodayAppointments(today);
+      const patients = await this.supabaseService.getPatients(1, 1000);
       this.appointments = appointments;
-      this.guestAppointments = guestAppointments;
-      this.patients = patients;
-      this.guests = guests;
+      this.guestAppointments = await this.supabaseService.getGuestAppointments();
+      this.patients = patients.patients || [];
+      this.guests = await this.supabaseService.getGuests();
       this.filteredAppointments = this.combineAppointments();
     } catch (error) {
       console.error('Error fetching data:', error);

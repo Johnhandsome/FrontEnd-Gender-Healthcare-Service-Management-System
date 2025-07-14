@@ -2,23 +2,24 @@ import { Patient } from './models/patient.interface';
 import { Injectable } from '@angular/core';
 import { supabase } from './supabase-client';
 import { from, Observable } from 'rxjs';
-import { Staff, DoctorDetails, Doctor } from './models/staff.interface';
-import { Role } from './models/staff.interface';
+import { Staff, DoctorDetails, Doctor, Role } from './models/staff.interface';
 import { Service } from './models/service.interface';
 import { Category } from './models/category.interface';
-import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateAppointmentRequest } from './models/appointment.interface';
+import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateAppointmentRequest, VisitType, ProcessStatus, ScheduleEnum } from './models/appointment.interface';
 import { BlogPost, CreateBlogPostRequest, UpdateBlogPostRequest } from './models/blog.interface';
 import { Notification } from './models/notification.interface';
-import { Receipt, UpdateReceiptRequest } from './models/receipt.interface';
 import { PatientReport, UpdatePatientReportRequest, CreatePatientReportRequest } from './models/patient-report.interface';
 import { PeriodTracking, UpdatePeriodTrackingRequest, CreatePeriodTrackingRequest } from './models/period-tracking.interface';
-import { DoctorSlotAssignment, Slot, CreateDoctorSlotAssignmentRequest } from './models/slot.interface';
-import { HttpClient } from '@angular/common/http';
-
+import { Receipt } from './models/receipt.interface';
 @Injectable({
   providedIn: 'root'
 })
 export class SupabaseService {
+
+
+
+
+
   // Đếm số bệnh nhân theo tháng
   getPatientCountByMonth(year: number, month: number): Observable<number> {
     return from(
@@ -72,34 +73,8 @@ export class SupabaseService {
     return this.formatDate(yesterday);
   }
 
-  // Lấy Loại Dịch vụ
-  async getServiceCatagories() {
-    const { data, error } = await supabase
-      .from('service_categories') // 👈 tên bảng trong Supabase
-      .select('*');
 
-    if (error) {
-      console.error('Lỗi lấy dữ liệu:', error.message);
-      throw error;
-    }
 
-    return data;
-  }
-
-  // Lấy tất cả bệnh nhân
-  async getAllPatients() {
-    const { data, error } = await supabase
-      .from('patients')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Lỗi khi load tất cả bệnh nhân: ", error.message);
-      throw error;
-    }
-
-    return data || [];
-  }
 
   async searchPatientsGeneral(query: string) {
     const { data, error } = await supabase
@@ -248,23 +223,37 @@ export class SupabaseService {
   //#region ANALYTIC
 
 
+
+
   // 🟦 KPI: Appointments Count
-  async getAppointmentsCount(start: string, end: string) {
-    const { count } = await supabase
+  async getAppointmentsCount(start: string, end: string): Promise<number> {
+    const { count, error } = await supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', start)
       .lte('created_at', end);
+
+    if (error) {
+      console.error('Error fetching appointments count:', error);
+      throw error;
+    }
+
     return count || 0;
   }
 
   // 🟦 KPI: New Patients Count
-  async getNewPatientsCount(start: string, end: string) {
-    const { count } = await supabase
+  async getNewPatientsCount(start: string, end: string): Promise<number> {
+    const { count, error } = await supabase
       .from('patients')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', start)
       .lte('created_at', end);
+
+    if (error) {
+      console.error('Error fetching new patients count:', error);
+      throw error;
+    }
+
     return count || 0;
   }
 
@@ -351,15 +340,120 @@ export class SupabaseService {
 
   //#endregion
 
+  // Admin Dashboard Statistics
+  async getAdminDashboardStats() {
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      // Get today's appointments count
+      const { data: todayAppointments, error: todayError } = await supabase
+        .from('appointments')
+        .select('appointment_id')
+        .eq('appointment_date', today);
+
+      if (todayError) throw todayError;
+
+      // Get total pending appointments count
+      const { data: pendingAppointments, error: pendingError } = await supabase
+        .from('appointments')
+        .select('appointment_id')
+        .eq('appointment_status', 'pending');
+
+      if (pendingError) throw pendingError;
+
+      // Get total patients count
+      const { count: totalPatients, error: patientsError } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true });
+
+      if (patientsError) throw patientsError;
+
+      // Get total staff count
+      const { count: totalStaff, error: staffError } = await supabase
+        .from('staff_members')
+        .select('*', { count: 'exact', head: true });
+
+      if (staffError) throw staffError;
+
+      // Get today's revenue
+      const todayRevenue = await this.getDailyRevenue(today).toPromise().catch(() => 0);
+
+      return {
+        todayAppointments: todayAppointments?.length || 0,
+        pendingAppointments: pendingAppointments?.length || 0,
+        totalPatients: totalPatients || 0,
+        totalStaff: totalStaff || 0,
+        todayRevenue: todayRevenue || 0
+      };
+    } catch (error) {
+      console.error('Error fetching admin dashboard stats:', error);
+      throw error;
+    }
+  }
+
+  // Get recent activities for admin dashboard
+  async getRecentActivities(): Promise<any[]> {
+    try {
+      // Get recent appointments (last 5)
+      const { data: recentAppointments, error: appointmentsError } = await supabase
+        .from('appointments')
+        .select(`
+          appointment_id,
+          created_at,
+          appointment_status,
+          patient:patients(full_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Get recent patients (last 3)
+      const { data: recentPatients, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, full_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (patientsError) throw patientsError;
+
+      // Combine and format activities
+      const activities: any[] = [];
+
+      // Add appointment activities
+      recentAppointments?.forEach((appointment: any) => {
+        activities.push({
+          type: 'appointment',
+          description: `Appointment with ${appointment.patient?.full_name || 'Unknown Patient'}`,
+          timestamp: appointment.created_at,
+          status: appointment.appointment_status
+        });
+      });
+
+      // Add patient activities
+      recentPatients?.forEach((patient: any) => {
+        activities.push({
+          type: 'patient',
+          description: `New patient: ${patient.full_name}`,
+          timestamp: patient.created_at
+        });
+      });
+
+      // Sort by timestamp (most recent first)
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      return activities.slice(0, 8); // Return top 8 activities
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      throw error;
+    }
+  }
+
+  //#endregion
+
   //#region // ============= PATIENT FUNCTIONS ============= //
 
-  async getPatients_Patient_Dashboard(): Promise<Patient[]> {
-    const { data, error } = await supabase
-      .from('patients')
-      .select('*');
-    if (error) throw error;
-    return data ?? [];
-  }
+
 
   async getPatients(page: number, itemsPerPage: number): Promise<{ patients: Patient[]; total: number }> {
     const start = (page - 1) * itemsPerPage;
@@ -423,23 +517,23 @@ export class SupabaseService {
     return data;
   }
 
-  async updatePatient(patient: Patient): Promise<void> {
+
+
+
+  async updatePatient(patientId: string, patientData: Partial<Patient>): Promise<void> {
     const { error } = await supabase
       .from('patients')
-      .update(patient)
-      .eq('id', patient.id);
+      .update(patientData)
+      .eq('id', patientId);
     if (error) throw error;
   }
+
   //#endregion
 
   //#region // ============= APPOINTMENT FUNCTIONS ============= //
-  async getAppointments(): Promise<Appointment[]> {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('*');
-    if (error) throw error;
-    return data ?? [];
-  }
+
+
+
 
   async getGuestAppointments(): Promise<GuestAppointment[]> {
     const { data, error } = await supabase
@@ -468,11 +562,7 @@ export class SupabaseService {
 
   //#region // ============= STAFF FUNCTIONS ============= //
 
-  async getStaffMembers(): Promise<Staff[]> {
-    const { data, error } = await supabase.from('staff_members').select('*');
-    if (error) throw error;
-    return data as Staff[];
-  }
+
 
   async getStaffRoles(): Promise<Role[]> {
     // Adjust this based on how staff_role_enum is stored (e.g., a table or hardcoded enum)
@@ -485,53 +575,65 @@ export class SupabaseService {
     ];
   }
 
-  async updateStaffMember(staff: Staff): Promise<void> {
-    const { error } = await supabase
-      .from('staff_members')
-      .update({
-        full_name: staff.full_name,
-        working_email: staff.working_email,
-        role: staff.role,
-        years_experience: staff.years_experience,
-        hired_at: staff.hired_at,
-        is_available: staff.is_available,
-        staff_status: staff.staff_status,
-        gender: staff.gender,
-        languages: staff.languages,
-        image_link: staff.image_link,
-        updated_at: new Date().toISOString() // Update timestamp
-      })
-      .eq('staff_id', staff.staff_id);
 
-    if (error) {
-      console.error('Error updating staff member:', error);
-      throw error;
-    }
+  async getStaffMembers(): Promise<Staff[]> {
+    const { data, error } = await supabase
+      .from('staff_members')
+      .select('*')
+      .order('full_name', { ascending: true });
+    if (error) throw error;
+    return data as Staff[];
   }
 
-  async addStaffMember(staff: Staff): Promise<void> {
+  async updateStaffMember(staffId: string, staffData: Partial<Staff>): Promise<void> {
     const { error } = await supabase
       .from('staff_members')
-      .insert({
-        staff_id: staff.staff_id,
-        full_name: staff.full_name,
-        working_email: staff.working_email,
-        role: staff.role,
-        years_experience: staff.years_experience,
-        hired_at: staff.hired_at,
-        is_available: staff.is_available,
-        staff_status: staff.staff_status,
-        gender: staff.gender,
-        languages: staff.languages,
-        image_link: staff.image_link,
-        created_at: staff.created_at,
-        updated_at: staff.updated_at
-      });
-    if (error) {
-      console.error('Error adding staff member:', error);
+      .update(staffData)
+      .eq('staff_id', staffId);
+    if (error) throw error;
+  }
+
+  async addStaffMember(staffData: Omit<Staff, 'staff_id' | 'created_at' | 'updated_at'>): Promise<Staff> {
+    const { data, error } = await supabase
+      .from('staff_members')
+      .insert([staffData])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Staff;
+  }
+
+  // Doctor Profile Methods
+  async getDoctorProfile(staffId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('staff_members')
+      .select(`
+        *,
+        doctor_details (*)
+      `)
+      .eq('staff_id', staffId)
+      .eq('role', 'doctor')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Check if doctor_details record exists
+  async checkDoctorDetailsExists(doctorId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('doctor_details')
+      .select('doctor_id')
+      .eq('doctor_id', doctorId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
+
+    return !!data;
   }
+
   //#endregion
 
   //#region //#region // ============= SERVICE FUNCTIONS ============= //
@@ -544,13 +646,7 @@ export class SupabaseService {
     return data as Service[];
   }
 
-  async getServiceCategories(): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('service_categories')
-      .select('*');
-    if (error) throw error;
-    return data as Category[];
-  }
+
 
   async addMedicalService(service: Service): Promise<void> {
     const { error } = await supabase
@@ -568,22 +664,9 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  async updateMedicalService(service: Service): Promise<void> {
-    const { error } = await supabase
-      .from('medical_services')
-      .update({
-        category_id: service.category_id,
-        service_name: service.service_name,
-        service_description: service.service_description,
-        service_cost: service.service_cost,
-        duration_minutes: service.duration_minutes,
-        is_active: service.is_active,
-        image_link: service.image_link,
-        excerpt: service.excerpt
-      })
-      .eq('service_id', service.service_id);
-    if (error) throw error;
-  }
+
+
+
 
   //#endregion
 
@@ -665,10 +748,10 @@ export class SupabaseService {
     } : null;
   }
 
-  // Update doctor profile
+  // Update doctor profile with upsert logic
   async updateDoctorProfile(doctor_id: string, staffData: Partial<Staff>, doctorData?: Partial<DoctorDetails>): Promise<void> {
     // Update staff_members table
-    if (Object.keys(staffData).length > 0) {
+    if (staffData && Object.keys(staffData).length > 0) {
       const { error: staffError } = await supabase
         .from('staff_members')
         .update(staffData)
@@ -676,13 +759,38 @@ export class SupabaseService {
       if (staffError) throw staffError;
     }
 
-    // Update doctor_details table if provided
+    // Handle doctor_details table with upsert logic
     if (doctorData && Object.keys(doctorData).length > 0) {
-      const { error: doctorError } = await supabase
+      // First, check if doctor_details record exists
+      const { data: existingRecord, error: checkError } = await supabase
         .from('doctor_details')
-        .update(doctorData)
-        .eq('doctor_id', doctor_id);
-      if (doctorError) throw doctorError;
+        .select('doctor_id')
+        .eq('doctor_id', doctor_id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if no record exists
+        throw checkError;
+      }
+
+      if (existingRecord) {
+        // Record exists, update it
+        const { error: updateError } = await supabase
+          .from('doctor_details')
+          .update(doctorData)
+          .eq('doctor_id', doctor_id);
+        if (updateError) throw updateError;
+      } else {
+        // Record doesn't exist, create it
+        const newDoctorData = {
+          doctor_id: doctor_id,
+          ...doctorData
+        };
+        const { error: insertError } = await supabase
+          .from('doctor_details')
+          .insert(newDoctorData);
+        if (insertError) throw insertError;
+      }
     }
   }
 
@@ -1046,6 +1154,13 @@ export class SupabaseService {
   }
 
   //#endregion
+
+  // RPC method for calling Supabase functions
+  async callRpc(functionName: string, params: any): Promise<any> {
+    const { data, error } = await supabase.rpc(functionName, params);
+    if (error) throw error;
+    return data;
+  }
 
   // Authentication methods
   async getStaffByEmail(email: string): Promise<Staff | null> {

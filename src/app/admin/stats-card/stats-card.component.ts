@@ -68,37 +68,33 @@ export class StatsCardComponent implements OnInit {
     this.loadStatsData();
   }
 
-  private loadStatsData(): void {
+  private async loadStatsData(): Promise<void> {
     this.isLoading = true;
-    const today = this.SupabaseService.getTodayDate();
-    const yesterday = this.SupabaseService.getYesterdayDate();
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1;
+    try {
+      // Load dashboard stats using fake data
+      const dashboardStats = await this.SupabaseService.getAdminDashboardStats();
 
-    forkJoin({
-      todayAppointments: this.SupabaseService.getAppointmentCountByDay(today),
-      yesterdayAppointments: this.SupabaseService.getAppointmentCountByDay(yesterday),
-      totalPatients: this.SupabaseService.getPatientCountByMonth(currentYear, currentMonth),
-      todayRevenue: this.SupabaseService.getDailyRevenue(today),
-      yesterdayRevenue: this.SupabaseService.getDailyRevenue(yesterday),
-      pendingTasks: this.SupabaseService.getPendingAppointmentsCount(),
-      todayPendingTasks: this.SupabaseService.getTodayPendingAppointmentsCount(),
-    }).subscribe({
-      next: (data) => {
-        this.updateStatsCards(data);
-        this.isLoading = false;
-        this.hasCriticalAlertsAndNotLoading = this.hasCriticalAlerts;
-        this.updateLastUpdated();
-      },
-      error: (error) => {
-        console.error('Error loading stats data:', error);
-        this.handleError();
-        this.isLoading = false;
-        this.hasCriticalAlertsAndNotLoading = this.hasCriticalAlerts;
-        this.updateLastUpdated();
-      }
-    });
+      const data = {
+        todayAppointments: dashboardStats.todayAppointments,
+        yesterdayAppointments: Math.max(0, dashboardStats.todayAppointments - 1), // Mock yesterday data
+        totalPatients: dashboardStats.totalPatients,
+        todayRevenue: dashboardStats.todayAppointments * 500000, // Mock revenue calculation
+        yesterdayRevenue: (dashboardStats.todayAppointments - 1) * 500000,
+        pendingTasks: dashboardStats.pendingAppointments,
+        todayPendingTasks: Math.floor(dashboardStats.pendingAppointments / 2)
+      };
+
+      this.updateStatsCards(data);
+      this.isLoading = false;
+      this.hasCriticalAlertsAndNotLoading = this.hasCriticalAlerts;
+      this.updateLastUpdated();
+    } catch (error) {
+      console.error('Error loading stats data:', error);
+      this.handleError();
+      this.isLoading = false;
+      this.hasCriticalAlertsAndNotLoading = this.hasCriticalAlerts;
+      this.updateLastUpdated();
+    }
   }
 
   private updateStatsCards(data: any): void {

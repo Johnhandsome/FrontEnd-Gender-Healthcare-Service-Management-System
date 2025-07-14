@@ -1,25 +1,21 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class BreadcrumbService {
-  // Dạng: { [url: string]: label }
-  private labelSubject = new BehaviorSubject<{ [url: string]: string }>({});
-  label$ = this.labelSubject.asObservable();
+  private labelSubject = new BehaviorSubject<any>({});
+  public label$ = this.labelSubject.asObservable();
 
-  setLabel(url: string, label: string) {
-    const labels = { ...this.labelSubject.value };
-    labels[url] = label;
-    this.labelSubject.next(labels);
+  setLabel(path: string, label: string): void {
+    const currentLabels = this.labelSubject.value;
+    this.labelSubject.next({ ...currentLabels, [path]: label });
   }
 
-  getLabel(url: string): string | undefined {
-    return this.labelSubject.value[url];
-  }
-
-  clearLabel(url: string) {
-    const labels = { ...this.labelSubject.value };
-    delete labels[url];
-    this.labelSubject.next(labels);
+  clearLabel(path: string): void {
+    const currentLabels = this.labelSubject.value;
+    delete currentLabels[path];
+    this.labelSubject.next({ ...currentLabels });
   }
 }

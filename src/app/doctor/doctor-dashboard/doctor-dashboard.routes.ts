@@ -9,6 +9,7 @@ import { BlogPostsComponent } from '../blog-posts/blog-posts.component';
 import { ProfileComponent } from '../profile/profile.component';
 import { NotificationsComponent } from '../notifications/notifications.component';
 import { ActivityLogsComponent } from '../activity-logs/activity-logs.component';
+import { TestDoctorProfileComponent } from '../../test-doctor-profile.component';
 
 export const doctorDashboardRoutes: Routes = [
   { path: '', component: DashboardComponent },
@@ -20,5 +21,6 @@ export const doctorDashboardRoutes: Routes = [
   { path: 'blog-posts', component: BlogPostsComponent },
   { path: 'profile', component: ProfileComponent },
   { path: 'notifications', component: NotificationsComponent },
-  { path: 'activity-logs', component: ActivityLogsComponent }
+  { path: 'activity-logs', component: ActivityLogsComponent },
+  { path: 'test-profile', component: TestDoctorProfileComponent }
 ];

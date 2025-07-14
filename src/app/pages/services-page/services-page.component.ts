@@ -34,11 +34,11 @@ export class ServicePageComponent implements OnInit {
         const uniqueCats = Array.from(
           new Set(
             (data || [])
-              .map((s) => s.service_categories?.category_name)
+              .map((s: any) => s.service_categories?.category_name)
               .filter(Boolean)
           )
         );
-        this.categories.set(['All', ...uniqueCats]);
+        this.categories.set(['All', ...Array.from(uniqueCats).filter(Boolean) as string[]]);
         this.loading.set(false);
       },
       error: () => {

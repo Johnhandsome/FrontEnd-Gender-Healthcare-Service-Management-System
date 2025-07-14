@@ -1,0 +1,210 @@
+/* Custom styles for the doctor profile component */
+
+.profile-section {
+  @apply bg-white rounded-lg shadow-md p-6 mb-6;
+}
+
+.section-header {
+  @apply flex justify-between items-center mb-6;
+}
+
+.section-title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.edit-button {
+  @apply px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors;
+}
+
+.form-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.form-field {
+  @apply mb-4;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.form-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+}
+
+.form-input.error {
+  @apply border-red-500 focus:ring-red-500;
+}
+
+.form-textarea {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+  resize: vertical;
+}
+
+.form-select {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+}
+
+.error-message {
+  @apply text-red-500 text-sm mt-1;
+}
+
+.success-message {
+  @apply bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6;
+}
+
+.error-alert {
+  @apply bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6;
+}
+
+.button-primary {
+  @apply px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors;
+}
+
+.button-secondary {
+  @apply px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors;
+}
+
+.button-success {
+  @apply px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors;
+}
+
+.button-danger {
+  @apply text-red-600 hover:text-red-800 transition-colors;
+}
+
+.profile-image {
+  @apply w-24 h-24 rounded-full object-cover border-4 border-gray-200;
+}
+
+.profile-image-button {
+  @apply absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 transition-colors;
+}
+
+.info-display {
+  @apply text-gray-900;
+}
+
+.info-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.info-empty {
+  @apply text-gray-500;
+}
+
+.list-item {
+  @apply flex items-center justify-between p-4 border border-gray-200 rounded-lg;
+}
+
+.list-item-content h4 {
+  @apply font-semibold text-gray-900;
+}
+
+.list-item-content p {
+  @apply text-gray-600;
+}
+
+.list-item-content .text-sm {
+  @apply text-gray-500;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.language-tag {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800;
+}
+
+.language-remove {
+  @apply ml-2 text-blue-600 hover:text-blue-800 transition-colors;
+}
+
+.empty-state {
+  @apply text-gray-500 text-center py-4;
+}
+
+.loading-spinner {
+  @apply animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600;
+}
+
+.form-actions {
+  @apply flex space-x-4 mt-6;
+}
+
+.add-form {
+  @apply border-t pt-6;
+}
+
+.add-form-title {
+  @apply text-lg font-medium text-gray-900 mb-4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-grid {
+    @apply grid-cols-1;
+  }
+
+  .section-header {
+    @apply flex-col space-y-4 items-start;
+  }
+
+  .form-actions {
+    @apply flex-col space-x-0 space-y-2;
+  }
+
+  .form-actions button {
+    @apply w-full;
+  }
+}
+
+/* Animation for smooth transitions */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus styles for accessibility */
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  @apply ring-2 ring-blue-500 ring-opacity-50;
+}
+
+/* Hover effects */
+.edit-button:hover,
+.button-primary:hover,
+.button-secondary:hover,
+.button-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar for textareas */
+.form-textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.form-textarea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.form-textarea::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.form-textarea::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

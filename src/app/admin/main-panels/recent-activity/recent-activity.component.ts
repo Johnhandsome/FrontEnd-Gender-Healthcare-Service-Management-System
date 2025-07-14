@@ -36,16 +36,16 @@ export class RecentActivityComponent implements OnInit {
   async loadRecentNotifications() {
     this.isLoading = true;
     try {
-      const notifications: Notification[] = await this.supabaseService.getRecentNotifications();
-      this.activities = notifications.map((notification: Notification) => ({
-        type: this.getActivityType(notification.notification_type),
-        iconPath: this.getIconPath(notification.notification_type),
-        title: this.getTitle(notification),
-        description: this.getDescription(notification),
+      const recentActivities = await this.supabaseService.getRecentActivities();
+      this.activities = recentActivities.map((activity: any) => ({
+        type: this.getActivityTypeFromActivity(activity.type),
+        iconPath: this.getIconPathFromActivity(activity.type),
+        title: this.getTitleFromActivity(activity),
+        description: this.getDescriptionFromActivity(activity),
         iconHover: false
       }));
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error('Error loading recent activities:', error);
       this.activities = [{
         type: 'error',
         iconPath: 'M12 9v2m0 4h.01M12 4a8 8 0 100 16 8 8 0 000-16z',
@@ -106,5 +106,44 @@ export class RecentActivityComponent implements OnInit {
     const diffHours = Math.round(diffMins / 60);
     if (diffHours === 1) return '1 hour ago';
     return `${diffHours} hours ago`;
+  }
+
+  // New methods for handling activity data
+  private getActivityTypeFromActivity(type: string): 'info' | 'success' | 'error' {
+    switch (type) {
+      case 'appointment':
+        return 'info';
+      case 'patient':
+        return 'success';
+      default:
+        return 'info';
+    }
+  }
+
+  private getIconPathFromActivity(type: string): string {
+    switch (type) {
+      case 'appointment':
+        return 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z';
+      case 'patient':
+        return 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z';
+      default:
+        return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+    }
+  }
+
+  private getTitleFromActivity(activity: any): string {
+    switch (activity.type) {
+      case 'appointment':
+        return 'New Appointment';
+      case 'patient':
+        return 'New Patient';
+      default:
+        return 'Activity';
+    }
+  }
+
+  private getDescriptionFromActivity(activity: any): string {
+    const timeAgo = this.getTimeAgo(activity.timestamp);
+    return `${activity.description} - ${timeAgo}`;
   }
 }

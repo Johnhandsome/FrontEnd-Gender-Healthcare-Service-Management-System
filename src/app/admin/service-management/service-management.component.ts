@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SupabaseService } from '../../supabase.service';
 import { ServiceSearchBarComponent } from './service-search-bar/service-search-bar.component';
 import { ServiceTableComponent } from './service-table/service-table.component';
 import { Service } from '../../models/service.interface';
-import { Category } from '../../models/category.interface';
 import { HeaderComponent } from "../header/header.component";
 import { SidebarComponent } from "../sidebar/sidebar.component";
+import { CategoryService } from '../../Services/category.service';
+import { ServiceManagementService } from '../../Services/service-management.service';
+import { Category } from '../../models/category.interface';
 
 @Component({
   selector: 'app-service-management',
@@ -63,14 +64,17 @@ export class ServiceManagementComponent implements OnInit {
   currentPage: number = 1;
   readonly pageSize: number = 10;
 
-  constructor(private supabaseService: SupabaseService) {}
+  constructor(
+    private serviceManagementService: ServiceManagementService,
+    private categoryService: CategoryService
+  ) {}
 
   async ngOnInit() {
     this.isLoading = true;
     try {
       const [services, categories] = await Promise.all([
-        this.supabaseService.getMedicalService(),
-        this.supabaseService.getServiceCategories()
+        this.serviceManagementService.getMedicalServices(),
+        this.categoryService.getServiceCategories()
       ]);
       this.services = services;
       this.categories = categories;
@@ -186,8 +190,8 @@ export class ServiceManagementComponent implements OnInit {
           return acc;
         }, {} as { [key in DescriptionKey]: string | null })
       };
-      await this.supabaseService.addMedicalService(serviceToAdd);
-      this.services = await this.supabaseService.getMedicalService();
+      await this.serviceManagementService.addMedicalService(serviceToAdd);
+      this.services = await this.serviceManagementService.getMedicalServices();
       this.filteredServices = [...this.services];
       this.currentPage = 1; // Reset to first page after adding
       this.closeAddServiceModal();
@@ -247,8 +251,8 @@ export class ServiceManagementComponent implements OnInit {
           return acc;
         }, {} as { [key in DescriptionKey]: string | null })
       };
-      await this.supabaseService.updateMedicalService(serviceToUpdate);
-      this.services = await this.supabaseService.getMedicalService();
+      await this.serviceManagementService.updateMedicalService(serviceToUpdate);
+      this.services = await this.serviceManagementService.getMedicalServices();
       this.filteredServices = [...this.services];
       this.currentPage = 1; // Reset to first page after updating
       this.closeEditServiceModal();

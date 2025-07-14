@@ -1,0 +1,540 @@
+<div class="min-h-screen bg-gray-50 p-6">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Personal Profile</h1>
+      <p class="text-gray-600 mt-2">Manage your personal and professional information</p>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+      {{ error }}
+    </div>
+
+    <!-- Success Message -->
+    <div *ngIf="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+      {{ successMessage }}
+    </div>
+
+    <!-- Profile Content -->
+    <div *ngIf="!loading && doctor" class="space-y-8">
+
+      <!-- Profile Image Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center space-x-6">
+          <div class="relative">
+            <img
+              [src]="doctor.image_link || '/assets/default-avatar.png'"
+              [alt]="doctor.full_name"
+              class="w-24 h-24 rounded-full object-cover border-4 border-gray-200">
+            <button class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </button>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">{{ doctor.full_name }}</h2>
+            <p class="text-gray-600">{{ getDepartmentDisplayName(doctor.doctor_details?.department || '') }}</p>
+            <p class="text-gray-500">{{ getSpecialityDisplayName(doctor.doctor_details?.speciality || '') }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basic Information Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Basic Information</h3>
+          <button
+            (click)="toggleEditBasic()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingBasic ? 'Cancel' : 'Edit' }}
+          </button>
+        </div>
+
+        <!-- View Mode -->
+        <div *ngIf="!isEditingBasic" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <p class="text-gray-900">{{ doctor.full_name || 'Not provided' }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Working Email</label>
+            <p class="text-gray-900">{{ doctor.working_email || 'Not provided' }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+            <p class="text-gray-900">{{ getGenderDisplayName(doctor.gender || '') }}</p>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <form *ngIf="isEditingBasic" [formGroup]="basicInfoForm" (ngSubmit)="saveBasicInfo()" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+              <input
+                type="text"
+                formControlName="full_name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="basicInfoForm.get('full_name')?.invalid && basicInfoForm.get('full_name')?.touched">
+              <div *ngIf="basicInfoForm.get('full_name')?.invalid && basicInfoForm.get('full_name')?.touched"
+                   class="text-red-500 text-sm mt-1">
+                Full name is required
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Working Email *</label>
+              <input
+                type="email"
+                formControlName="working_email"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="basicInfoForm.get('working_email')?.invalid && basicInfoForm.get('working_email')?.touched">
+              <div *ngIf="basicInfoForm.get('working_email')?.invalid && basicInfoForm.get('working_email')?.touched"
+                   class="text-red-500 text-sm mt-1">
+                Valid working email is required
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+              <select
+                formControlName="gender"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="basicInfoForm.get('gender')?.invalid && basicInfoForm.get('gender')?.touched">
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Profile Image URL</label>
+              <input
+                type="url"
+                formControlName="image_link"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div class="flex space-x-4">
+            <button
+              type="submit"
+              [disabled]="basicInfoForm.invalid || saving"
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+              {{ saving ? 'Saving...' : 'Save Changes' }}
+            </button>
+            <button
+              type="button"
+              (click)="toggleEditBasic()"
+              class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Professional Information Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Professional Information</h3>
+          <button
+            (click)="toggleEditProfessional()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingProfessional ? 'Cancel' : 'Edit' }}
+          </button>
+        </div>
+
+        <!-- View Mode -->
+        <div *ngIf="!isEditingProfessional" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <p class="text-gray-900">{{ getDepartmentDisplayName(doctor.doctor_details?.department || '') }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Speciality</label>
+            <p class="text-gray-900">{{ getSpecialityDisplayName(doctor.doctor_details?.speciality || '') }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+            <p class="text-gray-900">{{ doctor.doctor_details?.license_no || 'Not provided' }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
+            <p class="text-gray-900">{{ doctor.years_experience || 0 }} years</p>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <form *ngIf="isEditingProfessional" [formGroup]="professionalForm" (ngSubmit)="saveProfessionalInfo()" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+              <select
+                formControlName="department"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="professionalForm.get('department')?.invalid && professionalForm.get('department')?.touched">
+                <option value="">Select Department</option>
+                <option value="reproductive_health">Reproductive Health</option>
+                <option value="urology">Urology</option>
+                <option value="gynecology">Gynecology</option>
+                <option value="transgender_care">Transgender Care</option>
+                <option value="sexual_health">Sexual Health</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Speciality *</label>
+              <select
+                formControlName="speciality"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="professionalForm.get('speciality')?.invalid && professionalForm.get('speciality')?.touched">
+                <option value="">Select Speciality</option>
+                <option value="hormone_therapy">Hormone Therapy</option>
+                <option value="mental_health">Mental Health</option>
+                <option value="gender_surgery">Gender Surgery</option>
+                <option value="general_practice">General Practice</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">License Number *</label>
+              <input
+                type="text"
+                formControlName="license_no"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="professionalForm.get('license_no')?.invalid && professionalForm.get('license_no')?.touched">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Years of Experience *</label>
+              <input
+                type="number"
+                formControlName="years_experience"
+                min="0"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="professionalForm.get('years_experience')?.invalid && professionalForm.get('years_experience')?.touched">
+            </div>
+          </div>
+          <div class="flex space-x-4">
+            <button
+              type="submit"
+              [disabled]="professionalForm.invalid || saving"
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+              {{ saving ? 'Saving...' : 'Save Changes' }}
+            </button>
+            <button
+              type="button"
+              (click)="toggleEditProfessional()"
+              class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Bio and About Me Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Bio & About Me</h3>
+          <button
+            (click)="toggleEditBio()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingBio ? 'Cancel' : 'Edit' }}
+          </button>
+        </div>
+
+        <!-- View Mode -->
+        <div *ngIf="!isEditingBio" class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Professional Bio</label>
+            <p class="text-gray-900 leading-relaxed">{{ doctor.doctor_details?.bio || 'No bio provided' }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Professional Slogan</label>
+            <p class="text-gray-900 italic">{{ doctor.doctor_details?.slogan || 'No slogan provided' }}</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <p class="text-gray-900">{{ doctor.doctor_details?.about_me?.description || 'Not provided' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Experience</label>
+              <p class="text-gray-900">{{ doctor.doctor_details?.about_me?.experience || 'Not provided' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Approach</label>
+              <p class="text-gray-900">{{ doctor.doctor_details?.about_me?.approach || 'Not provided' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <form *ngIf="isEditingBio" [formGroup]="bioForm" (ngSubmit)="saveBioInfo()" class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Professional Bio</label>
+            <textarea
+              formControlName="bio"
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe your professional background and expertise..."></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Professional Slogan</label>
+            <input
+              type="text"
+              formControlName="slogan"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Your professional motto or slogan...">
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                formControlName="about_description"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Brief description about yourself..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Experience</label>
+              <textarea
+                formControlName="about_experience"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Your professional experience..."></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Approach</label>
+              <textarea
+                formControlName="about_approach"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Your approach to patient care..."></textarea>
+            </div>
+          </div>
+          <div class="flex space-x-4">
+            <button
+              type="submit"
+              [disabled]="saving"
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+              {{ saving ? 'Saving...' : 'Save Changes' }}
+            </button>
+            <button
+              type="button"
+              (click)="toggleEditBio()"
+              class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Education Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Education</h3>
+          <button
+            (click)="toggleEditEducation()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingEducation ? 'Done' : 'Manage' }}
+          </button>
+        </div>
+
+        <!-- Education List -->
+        <div class="space-y-4 mb-6">
+          <div *ngFor="let education of educations; let i = index"
+               class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+            <div>
+              <h4 class="font-semibold text-gray-900">{{ education.degree }}</h4>
+              <p class="text-gray-600">{{ education.institution }}</p>
+              <p class="text-sm text-gray-500">Completed: {{ education.year_completed }}</p>
+            </div>
+            <button
+              *ngIf="isEditingEducation"
+              (click)="removeEducation(i)"
+              class="text-red-600 hover:text-red-800">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+          <div *ngIf="educations.length === 0" class="text-gray-500 text-center py-4">
+            No education entries added yet
+          </div>
+        </div>
+
+        <!-- Add Education Form -->
+        <div *ngIf="isEditingEducation" class="border-t pt-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">Add Education</h4>
+          <form [formGroup]="educationForm" (ngSubmit)="addEducation()" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Degree *</label>
+                <input
+                  type="text"
+                  formControlName="degree"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., MD, PhD, Bachelor's">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Institution *</label>
+                <input
+                  type="text"
+                  formControlName="institution"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="University or Institution name">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Year Completed *</label>
+                <input
+                  type="number"
+                  formControlName="year_completed"
+                  min="1950"
+                  [max]="getCurrentYear()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+            <button
+              type="submit"
+              [disabled]="educationForm.invalid"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400">
+              Add Education
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Certifications Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Certifications</h3>
+          <button
+            (click)="toggleEditCertifications()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingCertifications ? 'Done' : 'Manage' }}
+          </button>
+        </div>
+
+        <!-- Certifications List -->
+        <div class="space-y-4 mb-6">
+          <div *ngFor="let certification of certifications; let i = index"
+               class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+            <div>
+              <h4 class="font-semibold text-gray-900">{{ certification.name }}</h4>
+              <p class="text-gray-600">{{ certification.institution }}</p>
+              <p class="text-sm text-gray-500">Awarded: {{ certification.year_awarded }}</p>
+            </div>
+            <button
+              *ngIf="isEditingCertifications"
+              (click)="removeCertification(i)"
+              class="text-red-600 hover:text-red-800">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+          <div *ngIf="certifications.length === 0" class="text-gray-500 text-center py-4">
+            No certifications added yet
+          </div>
+        </div>
+
+        <!-- Add Certification Form -->
+        <div *ngIf="isEditingCertifications" class="border-t pt-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">Add Certification</h4>
+          <form [formGroup]="certificationForm" (ngSubmit)="addCertification()" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Certification Name *</label>
+                <input
+                  type="text"
+                  formControlName="name"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Board Certification">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Issuing Institution *</label>
+                <input
+                  type="text"
+                  formControlName="institution"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Certifying body or institution">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Year Awarded *</label>
+                <input
+                  type="number"
+                  formControlName="year_awarded"
+                  min="1950"
+                  [max]="getCurrentYear()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+            </div>
+            <button
+              type="submit"
+              [disabled]="certificationForm.invalid"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400">
+              Add Certification
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Languages Section -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-semibold text-gray-900">Languages</h3>
+          <button
+            (click)="toggleEditLanguages()"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200">
+            {{ isEditingLanguages ? 'Done' : 'Manage' }}
+          </button>
+        </div>
+
+        <!-- Languages List -->
+        <div class="mb-6">
+          <div *ngIf="languages.length > 0" class="flex flex-wrap gap-2">
+            <span *ngFor="let language of languages; let i = index"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {{ language }}
+              <button
+                *ngIf="isEditingLanguages"
+                (click)="removeLanguage(i)"
+                class="ml-2 text-blue-600 hover:text-blue-800">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </span>
+          </div>
+          <div *ngIf="languages.length === 0" class="text-gray-500 text-center py-4">
+            No languages added yet
+          </div>
+        </div>
+
+        <!-- Add Language Form -->
+        <div *ngIf="isEditingLanguages" class="border-t pt-6">
+          <h4 class="text-lg font-medium text-gray-900 mb-4">Add Language</h4>
+          <form [formGroup]="languagesForm" (ngSubmit)="addLanguage()" class="flex space-x-4">
+            <div class="flex-1">
+              <input
+                type="text"
+                formControlName="language"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., English, Vietnamese, Spanish">
+            </div>
+            <button
+              type="submit"
+              [disabled]="languagesForm.invalid"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400">
+              Add Language
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

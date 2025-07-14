@@ -2,7 +2,7 @@ export interface Staff {
   staff_id: string;
   full_name: string;
   working_email: string;
-  email?: string; // Alternative email field
+  phone?: string; // Phone number
   role: string; // Assuming staff_role_enum is a string-based enum
   years_experience?: number;
   hired_at: string; // Date will be handled as string from Supabase
@@ -13,7 +13,7 @@ export interface Staff {
   image_link?: string;
   gender?: string; // Assuming gender_enum is a string-based enum
   languages?: string[];
-  password?: string; // For authentication (should be hashed in production)
+  password?: string; // For authentication purposes - handle securely
 }
 
 export interface Role {
@@ -44,18 +44,11 @@ export interface Doctor extends Staff {
 
 // Enums for Doctor
 export enum Department {
-  CARDIOLOGY = 'cardiology',
-  DERMATOLOGY = 'dermatology',
-  ENDOCRINOLOGY = 'endocrinology',
-  GASTROENTEROLOGY = 'gastroenterology',
+  REPRODUCTIVE_HEALTH = 'reproductive_health',
+  UROLOGY = 'urology',
   GYNECOLOGY = 'gynecology',
-  NEUROLOGY = 'neurology',
-  ONCOLOGY = 'oncology',
-  ORTHOPEDICS = 'orthopedics',
-  PEDIATRICS = 'pediatrics',
-  PSYCHIATRY = 'psychiatry',
-  RADIOLOGY = 'radiology',
-  SURGERY = 'surgery'
+  TRANSGENDER_CARE = 'transgender_care',
+  SEXUAL_HEALTH = 'sexual_health'
 }
 
 export enum Speciality {

@@ -42,7 +42,8 @@ export class PatientManagementComponent implements OnInit {
   async ngOnInit() {
     this.isLoading = true;
     try {
-      this.patients = await this.supabaseService.getPatients_Patient_Dashboard();
+      const result = await this.supabaseService.getPatients(1, 1000);
+      this.patients = result.patients || [];
       this.filteredPatients = [...this.patients];
     } catch (error) {
       console.error('Error fetching patients:', error);
@@ -127,8 +128,9 @@ export class PatientManagementComponent implements OnInit {
   async updatePatient() {
     if (!this.selectedPatient) return;
     try {
-      await this.supabaseService.updatePatient(this.selectedPatient);
-      this.patients = await this.supabaseService.getPatients_Patient_Dashboard();
+      await this.supabaseService.updatePatient(this.selectedPatient.id, this.selectedPatient);
+      const result = await this.supabaseService.getPatients(1, 1000);
+      this.patients = result.patients || [];
       this.filteredPatients = [...this.patients];
       this.closeEditModal();
     } catch (error) {
