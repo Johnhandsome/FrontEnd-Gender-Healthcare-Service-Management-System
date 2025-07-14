@@ -8,13 +8,13 @@ export class AdminAuthGuard implements CanActivate {
   canActivate(): boolean {
     const role = localStorage.getItem('role');
     const staffId = localStorage.getItem('staff_id');
-    
+
     if (role === 'admin' || role === 'manager') {
       return true;
     }
-    
-    // Redirect to admin login if not authenticated
-    this.router.navigate(['/admin/login']);
+
+    // Redirect to unified login if not authenticated
+    this.router.navigate(['/login']);
     return false;
   }
 }

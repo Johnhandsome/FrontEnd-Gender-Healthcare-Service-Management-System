@@ -23,11 +23,11 @@
   <div *ngIf="!loading && !error">
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Today's Appointments -->
+      <!-- Today's Consultant Meetings -->
       <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
         <div class="flex items-center">
           <div class="flex-1">
-            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Today's Appointments</h3>
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Today's Meetings</h3>
             <p class="text-3xl font-bold text-gray-900">{{ stats.todayAppointments }}</p>
           </div>
           <div class="flex-shrink-0">
@@ -38,11 +38,11 @@
         </div>
       </div>
 
-      <!-- Pending Appointments -->
+      <!-- Pending Meetings -->
       <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
         <div class="flex items-center">
           <div class="flex-1">
-            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pending Appointments</h3>
+            <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pending Meetings</h3>
             <p class="text-3xl font-bold text-gray-900">{{ stats.pendingAppointments }}</p>
           </div>
           <div class="flex-shrink-0">
@@ -74,11 +74,11 @@
           <div class="flex-1">
             <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h3>
             <div class="mt-2 space-y-2">
-              <button (click)="navigateToAppointments()" 
+              <button (click)="navigateToConsultantMeetings()"
                       class="w-full text-left text-sm text-blue-600 hover:text-blue-800">
-                View Appointments
+                Consultant Meetings
               </button>
-              <button (click)="navigateToPatients()" 
+              <button (click)="navigateToPatients()"
                       class="w-full text-left text-sm text-blue-600 hover:text-blue-800">
                 Manage Patients
               </button>
@@ -93,17 +93,17 @@
       </div>
     </div>
 
-    <!-- Recent Appointments -->
+    <!-- Recent Consultant Meetings -->
     <div class="bg-white rounded-lg shadow-md">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Appointments</h2>
+        <h2 class="text-lg font-semibold text-gray-900">Recent Consultant Meetings</h2>
       </div>
       <div class="p-6">
         <div *ngIf="stats.recentAppointments.length === 0" class="text-center py-8 text-gray-500">
-          No recent appointments found.
+          No recent consultant meetings found.
         </div>
         <div *ngIf="stats.recentAppointments.length > 0" class="space-y-4">
-          <div *ngFor="let appointment of stats.recentAppointments" 
+          <div *ngFor="let appointment of stats.recentAppointments"
                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
             <div class="flex-1">
               <div class="flex items-center space-x-3">
@@ -133,9 +133,9 @@
           </div>
         </div>
         <div *ngIf="stats.recentAppointments.length > 0" class="mt-6 text-center">
-          <button (click)="navigateToAppointments()" 
+          <button (click)="navigateToConsultantMeetings()"
                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            View All Appointments
+            View All Consultant Meetings
             <svg class="ml-2 -mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>

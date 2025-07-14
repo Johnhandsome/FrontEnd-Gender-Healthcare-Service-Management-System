@@ -59,6 +59,10 @@ export class DashboardComponent implements OnInit {
     this.router.navigate(['/doctor/dashboard/appointments']);
   }
 
+  navigateToConsultantMeetings() {
+    this.router.navigate(['/doctor/dashboard/consultant-meetings']);
+  }
+
   navigateToPatients() {
     this.router.navigate(['/doctor/dashboard/patients']);
   }

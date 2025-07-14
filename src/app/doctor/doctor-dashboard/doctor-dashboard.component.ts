@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DoctorHeaderComponent } from '../header/header.component';
+import { DoctorHeaderComponent } from '../doctor-header/doctor-header.component';
 import { DoctorSidebarComponent } from '../doctor-sidebar/doctor-sidebar.component';
 import { RouterOutlet } from '@angular/router';
 

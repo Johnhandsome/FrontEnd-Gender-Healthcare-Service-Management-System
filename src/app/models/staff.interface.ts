@@ -52,9 +52,9 @@ export enum Department {
 }
 
 export enum Speciality {
-  GENERAL_MEDICINE = 'general_medicine',
-  FAMILY_MEDICINE = 'family_medicine',
-  INTERNAL_MEDICINE = 'internal_medicine',
-  EMERGENCY_MEDICINE = 'emergency_medicine',
-  PREVENTIVE_MEDICINE = 'preventive_medicine'
+  REPRODUCTIVE_SPECIALIST = 'reproductive_specialist',
+  UROLOGIST = 'urologist',
+  GYNECOLOGIST = 'gynecologist',
+  ENDOCRINOLOGIST = 'endocrinologist',
+  SEXUAL_HEALTH_SPECIALIST = 'sexual_health_specialist'
 }

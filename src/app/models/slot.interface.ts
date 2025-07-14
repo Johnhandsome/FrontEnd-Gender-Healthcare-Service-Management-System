@@ -43,3 +43,45 @@ export interface UpdateDoctorSlotAssignmentRequest {
   doctor_slot_id: string;
   max_appointments?: number;
 }
+
+// Additional interfaces for Consultant Meetings page
+export interface DoctorSlotWithDetails extends DoctorSlotAssignment {
+  slot_details: Slot;
+  doctor_name?: string;
+  is_full: boolean;
+  availability_percentage: number;
+}
+
+export interface CalendarDay {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  hasSlots: boolean;
+  slots: DoctorSlotWithDetails[];
+  totalSlots: number;
+  totalAppointments: number;
+  maxAppointments: number;
+}
+
+export interface SlotFilter {
+  dateFrom?: string;
+  dateTo?: string;
+  status?: 'all' | 'active' | 'inactive' | 'full' | 'available';
+  searchTerm?: string;
+}
+
+export enum SlotStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  FULL = 'full',
+  AVAILABLE = 'available'
+}
+
+export interface SlotStatistics {
+  totalSlots: number;
+  activeSlots: number;
+  fullSlots: number;
+  totalAppointments: number;
+  totalCapacity: number;
+  utilizationRate: number;
+}

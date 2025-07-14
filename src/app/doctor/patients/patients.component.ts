@@ -5,7 +5,6 @@ import { SupabaseService } from '../../supabase.service';
 import { Router } from '@angular/router';
 import { Patient } from '../../models/patient.interface';
 import { PatientReport, CreatePatientReportRequest, ReportStatus } from '../../models/patient-report.interface';
-import { PeriodTracking } from '../../models/period-tracking.interface';
 
 @Component({
   selector: 'app-doctor-patients',
@@ -32,7 +31,8 @@ export class PatientsComponent implements OnInit {
   showPeriodModal = false;
   selectedPatient: Patient | null = null;
   patientReports: PatientReport[] = [];
-  patientPeriods: PeriodTracking[] = [];
+  // Period tracking functionality removed - keeping empty array for template compatibility
+  patientPeriods: any[] = [];
   patientAppointments: any[] = [];
 
   // Report form
@@ -131,10 +131,7 @@ export class PatientsComponent implements OnInit {
       this.patientAppointments = await this.supabaseService.getAppointmentsByDoctor(this.doctorId!);
       this.patientAppointments = this.patientAppointments.filter(a => a.patient_id === patient.id);
 
-      // Load period tracking if patient is female
-      if (patient.gender === 'female') {
-        this.patientPeriods = await this.supabaseService.getPatientPeriodTracking(patient.id);
-      }
+      // Period tracking functionality removed
     } catch (error: any) {
       console.error('Error loading patient details:', error);
     }
@@ -144,8 +141,8 @@ export class PatientsComponent implements OnInit {
     this.showPatientModal = false;
     this.selectedPatient = null;
     this.patientReports = [];
-    this.patientAppointments = [];
     this.patientPeriods = [];
+    this.patientAppointments = [];
   }
 
   openReportModal(patient: Patient) {

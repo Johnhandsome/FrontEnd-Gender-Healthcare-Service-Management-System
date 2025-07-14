@@ -76,7 +76,7 @@ export class ProfileComponent implements OnInit {
   ngOnInit() {
     this.doctorId = localStorage.getItem('doctor_id') || localStorage.getItem('staff_id');
     if (!this.doctorId) {
-      this.router.navigate(['/doctor/login']);
+      this.router.navigate(['/login']);
       return;
     }
     this.loadDoctorProfile();
@@ -92,7 +92,7 @@ export class ProfileComponent implements OnInit {
 
     this.professionalForm = this.fb.group({
       department: ['', [Validators.required, this.validateDepartment]],
-      speciality: ['', [Validators.required]],
+      speciality: ['', [Validators.required, this.validateSpeciality]],
       license_no: ['', [Validators.required]],
       years_experience: [0, [Validators.required, Validators.min(0)]]
     });
@@ -132,10 +132,23 @@ export class ProfileComponent implements OnInit {
 
       if (profileData) {
         // Transform the joined data into the expected Doctor interface
+        // Handle doctor_details which can be an array or null
+        let doctorDetails = null;
+        if (profileData.doctor_details) {
+          if (Array.isArray(profileData.doctor_details)) {
+            doctorDetails = profileData.doctor_details.length > 0 ? profileData.doctor_details[0] : null;
+          } else {
+            doctorDetails = profileData.doctor_details;
+          }
+        }
+
         this.doctor = {
           ...profileData,
-          doctor_details: profileData.doctor_details?.[0] || null
+          doctor_details: doctorDetails
         };
+
+        console.log('🔍 Loaded doctor profile:', this.doctor);
+        console.log('🔍 Doctor details:', this.doctor?.doctor_details);
 
         this.populateForms();
         this.extractArrayData();
@@ -162,12 +175,21 @@ export class ProfileComponent implements OnInit {
     });
 
     // Professional form
+    console.log('🔍 Populating professional form with:', {
+      department: this.doctor.doctor_details?.department,
+      speciality: this.doctor.doctor_details?.speciality,
+      license_no: this.doctor.doctor_details?.license_no,
+      years_experience: this.doctor.years_experience
+    });
+
     this.professionalForm.patchValue({
       department: this.doctor.doctor_details?.department || '',
       speciality: this.doctor.doctor_details?.speciality || '',
       license_no: this.doctor.doctor_details?.license_no || '',
       years_experience: this.doctor.years_experience || 0
     });
+
+    console.log('🔍 Professional form values after patch:', this.professionalForm.value);
 
     // Bio form
     const aboutMe = this.doctor.doctor_details?.about_me || {};
@@ -462,12 +484,41 @@ export class ProfileComponent implements OnInit {
     ];
   }
 
+  // Custom validator for speciality enum
+  validateSpeciality(control: any) {
+    const validSpecialities = [
+      'reproductive_specialist',
+      'urologist',
+      'gynecologist',
+      'endocrinologist',
+      'sexual_health_specialist'
+    ];
+
+    if (!control.value || validSpecialities.includes(control.value)) {
+      return null; // Valid
+    }
+
+    return { invalidSpeciality: true }; // Invalid
+  }
+
+  // Get all valid speciality options
+  getValidSpecialities() {
+    return [
+      { value: 'reproductive_specialist', label: 'Reproductive Specialist' },
+      { value: 'urologist', label: 'Urologist' },
+      { value: 'gynecologist', label: 'Gynecologist' },
+      { value: 'endocrinologist', label: 'Endocrinologist' },
+      { value: 'sexual_health_specialist', label: 'Sexual Health Specialist' }
+    ];
+  }
+
   getSpecialityDisplayName(speciality: string): string {
     const specialities: { [key: string]: string } = {
-      'hormone_therapy': 'Hormone Therapy',
-      'mental_health': 'Mental Health',
-      'gender_surgery': 'Gender Surgery',
-      'general_practice': 'General Practice'
+      'reproductive_specialist': 'Reproductive Specialist',
+      'urologist': 'Urologist',
+      'gynecologist': 'Gynecologist',
+      'endocrinologist': 'Endocrinologist',
+      'sexual_health_specialist': 'Sexual Health Specialist'
     };
     return specialities[speciality] || speciality;
   }

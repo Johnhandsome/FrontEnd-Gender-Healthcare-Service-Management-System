@@ -9,8 +9,9 @@ import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateA
 import { BlogPost, CreateBlogPostRequest, UpdateBlogPostRequest } from './models/blog.interface';
 import { Notification } from './models/notification.interface';
 import { PatientReport, UpdatePatientReportRequest, CreatePatientReportRequest } from './models/patient-report.interface';
-import { PeriodTracking, UpdatePeriodTrackingRequest, CreatePeriodTrackingRequest } from './models/period-tracking.interface';
 import { Receipt } from './models/receipt.interface';
+import { Slot, DoctorSlotAssignment, DoctorSlotWithDetails } from './models/slot.interface';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -585,6 +586,11 @@ export class SupabaseService {
     return data as Staff[];
   }
 
+  // Alias method for getAllStaff (used by database-init component)
+  async getAllStaff(): Promise<Staff[]> {
+    return this.getStaffMembers();
+  }
+
   async updateStaffMember(staffId: string, staffData: Partial<Staff>): Promise<void> {
     const { error } = await supabase
       .from('staff_members')
@@ -616,6 +622,12 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+
+    // Debug logging
+    console.log('🔍 Raw Supabase response:', data);
+    console.log('🔍 Doctor details from response:', data?.doctor_details);
+    console.log('🔍 Is doctor_details array?', Array.isArray(data?.doctor_details));
+
     return data;
   }
 
@@ -635,8 +647,6 @@ export class SupabaseService {
   }
 
   //#endregion
-
-  //#region //#region // ============= SERVICE FUNCTIONS ============= //
 
   async getMedicalService(): Promise<Service[]> {
     const { data, error } = await supabase
@@ -682,12 +692,26 @@ export class SupabaseService {
 
   // Get blog posts for a doctor
   async getDoctorBlogPosts(doctor_id: string) {
+    console.log('🔍 Fetching blog posts for doctor_id:', doctor_id);
+
     const { data, error } = await supabase
       .from('blog_posts')
       .select('*')
       .eq('doctor_id', doctor_id)
-      .order('published_at', { ascending: false });
-    if (error) throw error;
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Supabase error in getDoctorBlogPosts:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+
+    console.log('✅ Successfully fetched blog posts:', data?.length || 0, 'posts');
     return data || [];
   }
 
@@ -726,8 +750,6 @@ export class SupabaseService {
       category_name: appt.category?.category_name || 'General'
     }));
   }
-
-  //#region // ============= DOCTOR SPECIFIC FUNCTIONS ============= //
 
   // Get doctor details with staff information
   async getDoctorDetails(doctor_id: string): Promise<Doctor | null> {
@@ -857,17 +879,35 @@ export class SupabaseService {
 
   // Blog Posts Management
   async createBlogPost(doctor_id: string, blogData: CreateBlogPostRequest): Promise<BlogPost> {
+    console.log('📝 Creating blog post for doctor_id:', doctor_id);
+    console.log('📝 Blog data:', blogData);
+
+    const insertData = {
+      doctor_id,
+      ...blogData,
+      published_at: blogData.blog_status === 'published' ? new Date().toISOString() : null
+    };
+
+    console.log('📝 Insert data:', insertData);
+
     const { data, error } = await supabase
       .from('blog_posts')
-      .insert([{
-        doctor_id,
-        ...blogData,
-        published_at: blogData.blog_status === 'published' ? new Date().toISOString() : null
-      }])
+      .insert([insertData])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase error in createBlogPost:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+
+    console.log('✅ Successfully created blog post:', data);
     return data;
   }
 
@@ -981,46 +1021,7 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  // Period Tracking Management
-  async getPatientPeriodTracking(patient_id: string): Promise<PeriodTracking[]> {
-    const { data, error } = await supabase
-      .from('period_tracking')
-      .select(`
-        *,
-        patient:patients(full_name)
-      `)
-      .eq('patient_id', patient_id)
-      .order('start_date', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map((period: any) => ({
-      ...period,
-      patient_name: period.patient?.full_name || 'Unknown Patient'
-    }));
-  }
-
-  async createPeriodTracking(trackingData: CreatePeriodTrackingRequest): Promise<PeriodTracking> {
-    const { data, error } = await supabase
-      .from('period_tracking')
-      .insert([trackingData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async updatePeriodTracking(trackingData: UpdatePeriodTrackingRequest): Promise<void> {
-    const updateData: any = { ...trackingData };
-    delete updateData.period_id;
-
-    const { error } = await supabase
-      .from('period_tracking')
-      .update(updateData)
-      .eq('period_id', trackingData.period_id);
-
-    if (error) throw error;
-  }
+  // Period tracking functionality removed
 
   // Appointment Management for Doctors
   async createAppointment(appointmentData: CreateAppointmentRequest): Promise<Appointment> {
@@ -1163,11 +1164,110 @@ export class SupabaseService {
   }
 
   // Authentication methods
+  async getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+    return user;
+  }
+
+  // Sign in with email and password for RLS policies
+  async signInWithEmail(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error('Error signing in:', error);
+      throw error;
+    }
+
+    return data;
+  }
+
+  // Enhanced staff authentication with Supabase Auth integration
+  async authenticateStaffWithSupabase(email: string, password: string): Promise<{
+    success: boolean;
+    staff?: Staff;
+    supabaseUser?: any;
+    error?: {
+      code: string;
+      message: string;
+      timestamp: string;
+    };
+  }> {
+    const timestamp = new Date().toISOString();
+
+    try {
+      console.log('🔐 Authenticating staff with Supabase Auth:', { email, timestamp });
+
+      // First authenticate with our custom method
+      const authResult = await this.authenticateStaff(email, password);
+
+      if (!authResult.success) {
+        return authResult;
+      }
+
+      // If staff authentication successful, try to authenticate with Supabase Auth
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (data.user) {
+          console.log('✅ Staff authenticated with Supabase Auth');
+          return {
+            success: true,
+            staff: authResult.staff,
+            supabaseUser: data.user
+          };
+        }
+
+        if (error) {
+          console.log('⚠️ Supabase Auth failed, proceeding with staff-only auth:', error.message);
+        }
+      } catch (supabaseError: any) {
+        console.log('⚠️ Supabase Auth error, proceeding with staff-only auth:', supabaseError.message);
+      }
+
+      // Return success even if Supabase Auth fails
+      return {
+        success: true,
+        staff: authResult.staff
+      };
+
+    } catch (error: any) {
+      console.error('❌ Staff authentication error:', error);
+
+      return {
+        success: false,
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: error.message || 'Authentication failed. Please try again.',
+          timestamp
+        }
+      };
+    }
+  }
+
+  // Sign out
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+  }
+
   async getStaffByEmail(email: string): Promise<Staff | null> {
     const { data, error } = await supabase
       .from('staff_members')
       .select('*')
-      .or(`working_email.eq.${email},email.eq.${email}`)
+      .eq('working_email', email)
       .single();
 
     if (error) {
@@ -1177,5 +1277,239 @@ export class SupabaseService {
       throw error;
     }
     return data as Staff;
+  }
+
+  // Enhanced staff authentication with detailed error reporting
+  async authenticateStaff(email: string, password: string): Promise<{
+    success: boolean;
+    staff?: Staff;
+    error?: {
+      code: string;
+      message: string;
+      timestamp: string;
+    };
+  }> {
+    const timestamp = new Date().toISOString();
+
+    try {
+      console.log('🔍 Authenticating staff:', { email, timestamp });
+
+      // Hardcoded admin login
+      if (email === 'admin@example.com' && password === '123456') {
+        const adminStaff: Staff = {
+          staff_id: 'admin-hardcoded-id',
+          full_name: 'System Administrator',
+          working_email: 'admin@example.com',
+          role: 'admin',
+          years_experience: 5,
+          hired_at: '2024-01-01',
+          is_available: true,
+          staff_status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          image_link: undefined,
+          gender: undefined,
+          languages: []
+        };
+
+        console.log('✅ Hardcoded admin authentication successful:', {
+          staff_id: adminStaff.staff_id,
+          role: adminStaff.role,
+          email: adminStaff.working_email,
+          timestamp
+        });
+
+        return {
+          success: true,
+          staff: adminStaff
+        };
+      }
+
+      // Get staff member from database for other users
+      const staff = await this.getStaffByEmail(email);
+
+      if (!staff) {
+        return {
+          success: false,
+          error: {
+            code: 'STAFF_NOT_FOUND',
+            message: 'No staff member found with this email address.',
+            timestamp
+          }
+        };
+      }
+
+      // Check if staff is active
+      if (staff.staff_status !== 'active') {
+        return {
+          success: false,
+          error: {
+            code: 'STAFF_INACTIVE',
+            message: 'Staff account is not active. Please contact administrator.',
+            timestamp
+          }
+        };
+      }
+
+      // Validate password (using default password '123456' for all staff)
+      const defaultPassword = '123456';
+      if (password !== defaultPassword) {
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_PASSWORD',
+            message: 'Invalid password. Please check your credentials.',
+            timestamp
+          }
+        };
+      }
+
+      console.log('✅ Staff authentication successful:', {
+        staff_id: staff.staff_id,
+        role: staff.role,
+        email: staff.working_email,
+        timestamp
+      });
+
+      return {
+        success: true,
+        staff
+      };
+
+    } catch (error: any) {
+      console.error('❌ Staff authentication error:', error);
+
+      return {
+        success: false,
+        error: {
+          code: 'DATABASE_ERROR',
+          message: error.message || 'Database connection error. Please try again.',
+          timestamp
+        }
+      };
+    }
+  }
+
+  // ==================== SLOT MANAGEMENT METHODS ====================
+
+  // Get doctor's assigned slots with details
+  async getDoctorSlots(doctorId: string, dateFrom?: string, dateTo?: string): Promise<any[]> {
+    let query = supabase
+      .from('doctor_slot_assignments')
+      .select(`
+        *,
+        slots (
+          slot_id,
+          slot_date,
+          slot_time,
+          is_active,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('doctor_id', doctorId);
+
+    if (dateFrom) {
+      query = query.gte('slots.slot_date', dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte('slots.slot_date', dateTo);
+    }
+
+    const { data, error } = await query.order('slots.slot_date', { ascending: true });
+
+    if (error) throw error;
+
+    // Transform data to include calculated fields
+    return (data || []).map(assignment => ({
+      ...assignment,
+      slot_details: assignment.slots,
+      is_full: assignment.appointments_count >= assignment.max_appointments,
+      availability_percentage: (assignment.appointments_count / assignment.max_appointments) * 100
+    }));
+  }
+
+  // Get doctor slots for a specific date range (for calendar view)
+  async getDoctorSlotsForDateRange(doctorId: string, startDate: string, endDate: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('doctor_slot_assignments')
+      .select(`
+        *,
+        slots!inner (
+          slot_id,
+          slot_date,
+          slot_time,
+          is_active
+        )
+      `)
+      .eq('doctor_id', doctorId)
+      .gte('slots.slot_date', startDate)
+      .lte('slots.slot_date', endDate)
+      .order('slots.slot_date', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(assignment => ({
+      ...assignment,
+      slot_details: assignment.slots,
+      is_full: assignment.appointments_count >= assignment.max_appointments,
+      availability_percentage: (assignment.appointments_count / assignment.max_appointments) * 100
+    }));
+  }
+
+  // Get slot statistics for a doctor
+  async getDoctorSlotStatistics(doctorId: string, dateFrom?: string, dateTo?: string): Promise<any> {
+    let query = supabase
+      .from('doctor_slot_assignments')
+      .select(`
+        appointments_count,
+        max_appointments,
+        slots!inner (
+          is_active,
+          slot_date
+        )
+      `)
+      .eq('doctor_id', doctorId);
+
+    if (dateFrom) {
+      query = query.gte('slots.slot_date', dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte('slots.slot_date', dateTo);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const slots = data || [];
+    const totalSlots = slots.length;
+    const activeSlots = slots.filter((s: any) => s.slots.is_active).length;
+    const fullSlots = slots.filter((s: any) => s.appointments_count >= s.max_appointments).length;
+    const totalAppointments = slots.reduce((sum: number, s: any) => sum + s.appointments_count, 0);
+    const totalCapacity = slots.reduce((sum: number, s: any) => sum + s.max_appointments, 0);
+    const utilizationRate = totalCapacity > 0 ? (totalAppointments / totalCapacity) * 100 : 0;
+
+    return {
+      totalSlots,
+      activeSlots,
+      fullSlots,
+      totalAppointments,
+      totalCapacity,
+      utilizationRate: Math.round(utilizationRate * 100) / 100
+    };
+  }
+
+  // Update slot assignment capacity
+  async updateSlotCapacity(assignmentId: string, maxAppointments: number): Promise<any> {
+    const { data, error } = await supabase
+      .from('doctor_slot_assignments')
+      .update({ max_appointments: maxAppointments })
+      .eq('doctor_slot_id', assignmentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }

@@ -1,16 +1,18 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
   @for (card of statsCards; track card.title) {
-    <div class="bg-white shadow-md rounded-xl p-4 relative flex flex-col h-full min-h-[160px] transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+    <div class="bg-gradient-to-br from-white via-blue-50 to-indigo-50 shadow-xl rounded-2xl p-6 relative flex flex-col h-full min-h-[180px] transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-white/20 backdrop-blur-sm"
          [class.border-l-4]="card.priority !== 'normal'"
          [class.border-yellow-400]="card.priority === 'high'"
          [class.border-red-500]="card.priority === 'urgent'"
-         [class.bg-red-50]="card.priority === 'urgent'"
-         [class.bg-yellow-50]="card.priority === 'high'">
+         [class.from-red-50]="card.priority === 'urgent'"
+         [class.to-red-100]="card.priority === 'urgent'"
+         [class.from-yellow-50]="card.priority === 'high'"
+         [class.to-yellow-100]="card.priority === 'high'">
 
       <!-- Loading Overlay -->
       @if (card.loading) {
-        <div class="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center rounded-xl z-10">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <div class="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-2xl z-10">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
       }
 
@@ -26,8 +28,8 @@
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-sm font-semibold text-gray-600 leading-tight">{{ card.title }}</h3>
         <div class="flex-shrink-0">
-          <svg class="w-5 h-5 transition-colors duration-200"
-               [class.text-gray-500]="card.priority === 'normal'"
+          <svg class="w-6 h-6 transition-colors duration-200"
+               [class.text-indigo-600]="card.priority === 'normal'"
                [class.text-yellow-600]="card.priority === 'high'"
                [class.text-red-600]="card.priority === 'urgent'"
                xmlns="http://www.w3.org/2000/svg"
