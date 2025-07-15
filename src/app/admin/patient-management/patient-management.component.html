@@ -1,14 +1,23 @@
-<!-- Patient Management Content -->
+<!-- Enhanced Patient Management Content -->
 <div class="space-y-6 animate-fadeIn">
   <div class="container mx-auto max-w-full">
+    <!-- Enhanced Search Bar -->
     <app-patient-search-bar
+      [totalResults]="filteredPatients.length"
       (filterChange)="applyFilters($event)"
-      (addPatient)="openAddPatientModal()"
+      (exportData)="exportPatients()"
       class="mb-6"
     ></app-patient-search-bar>
-    <div *ngIf="isLoading" class="text-center py-4 text-gray-500">
-      Loading...
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+      <div class="flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <span class="text-gray-600 font-medium">Loading patients...</span>
+      </div>
     </div>
+
+    <!-- Enhanced Patient Table -->
     <app-patient-table
       *ngIf="!isLoading"
       [paginatedPatients]="paginatedPatients"
@@ -16,43 +25,85 @@
       [currentPage]="currentPage"
       (viewPatient)="openViewPatientModal($event)"
       (editPatient)="openEditPatientModal($event)"
+      (deactivatePatient)="onDeactivatePatient($event)"
+      (sortChange)="onSortChange($event)"
+      (bulkAction)="onBulkAction($event)"
     ></app-patient-table>
+    <!-- Enhanced Pagination -->
     <div
       *ngIf="!isLoading && filteredPatients.length > 0"
-      class="flex justify-between items-center mt-4"
+      class="bg-white rounded-2xl shadow-xl border border-white/20 px-6 py-4 mt-6"
     >
-      <div class="text-sm text-gray-700">
-        Page {{ currentPage }} of {{ totalPages }}
-      </div>
-      <div class="space-x-2">
-        <button
-          (click)="goToFirstPage()"
-          [disabled]="currentPage === 1"
-          class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-        >
-          First
-        </button>
-        <button
-          (click)="goToPreviousPage()"
-          [disabled]="currentPage === 1"
-          class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <button
-          (click)="goToNextPage()"
-          [disabled]="currentPage === totalPages"
-          class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-        >
-          Next
-        </button>
-        <button
-          (click)="goToLastPage()"
-          [disabled]="currentPage === totalPages"
-          class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-        >
-          Last
-        </button>
+      <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+        <!-- Results Info -->
+        <div class="text-sm text-gray-700">
+          Showing <span class="font-semibold text-purple-600">{{ (currentPage - 1) * pageSize + 1 }}</span> to
+          <span class="font-semibold text-purple-600">{{ Math.min(currentPage * pageSize, filteredPatients.length) }}</span> of
+          <span class="font-semibold text-purple-600">{{ filteredPatients.length }}</span> patients
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="flex items-center space-x-2">
+          <button
+            (click)="goToFirstPage()"
+            [disabled]="currentPage === 1"
+            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            title="First page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <button
+            (click)="goToPreviousPage()"
+            [disabled]="currentPage === 1"
+            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            title="Previous page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            <span class="ml-1">Previous</span>
+          </button>
+
+          <!-- Page Numbers -->
+          <div class="flex items-center space-x-1">
+            <span
+              *ngFor="let page of getVisiblePages()"
+              class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200"
+              [class]="page === currentPage
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
+                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 cursor-pointer'"
+              (click)="page !== currentPage && goToPage(page)"
+            >
+              {{ page }}
+            </span>
+          </div>
+
+          <button
+            (click)="goToNextPage()"
+            [disabled]="currentPage === totalPages"
+            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            title="Next page"
+          >
+            <span class="mr-1">Next</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
+          <button
+            (click)="goToLastPage()"
+            [disabled]="currentPage === totalPages"
+            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            title="Last page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div
@@ -63,56 +114,7 @@
     </div>
   </div>
 
-  <!-- Add Patient Modal -->
-  <div
-    *ngIf="showAddModal"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-  >
-    <div class="bg-white p-6 rounded-lg max-w-md w-full">
-      <h2 class="text-xl font-bold mb-4">Add Patient</h2>
-      <div class="space-y-4">
-        <input
-          [(ngModel)]="newPatient.full_name"
-          placeholder="Full Name"
-          class="w-full p-2 border rounded-md"
-        />
-        <input
-          [(ngModel)]="newPatient.phone"
-          placeholder="Phone"
-          class="w-full p-2 border rounded-md"
-        />
-        <input
-          [(ngModel)]="newPatient.email"
-          placeholder="Email"
-          class="w-full p-2 border rounded-md"
-        />
-        <select
-          [(ngModel)]="newPatient.gender"
-          class="w-full p-2 border rounded-md"
-        >
-          <option value="">Select Gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="other">Other</option>
-        </select>
-        <select
-          [(ngModel)]="newPatient.patient_status"
-          class="w-full p-2 border rounded-md"
-        >
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
-      <div class="mt-4 flex justify-end space-x-2">
-        <button
-          (click)="closeAddModal()"
-          class="px-4 py-2 bg-gray-200 rounded-md"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- View Patient Modal -->
   <div
@@ -567,3 +569,5 @@
     </div>
   </div>
 </div>
+
+

@@ -339,6 +339,127 @@ export class SupabaseService {
   }
 
 
+  // 🟩 CHART: Monthly Patient Growth
+  async getMonthlyPatientGrowth(months: number = 6): Promise<any[]> {
+    try {
+      console.log(`🔄 Fetching monthly patient growth for last ${months} months...`);
+      const monthsData = [];
+      const currentDate = new Date();
+
+      for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        const { count, error } = await supabase
+          .from('patients')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
+
+        if (error) {
+          console.error(`❌ Error fetching patient count for ${date.toLocaleDateString()}:`, error);
+          throw new Error(`Failed to fetch patient data for ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}: ${error.message}`);
+        }
+
+        monthsData.push({
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          value: count || 0
+        });
+      }
+
+      console.log('✅ Successfully fetched monthly patient growth:', monthsData);
+      return monthsData;
+    } catch (error: any) {
+      console.error('❌ Error fetching monthly patient growth:', error);
+      throw new Error(`Database error: ${error.message || 'Unable to fetch patient growth data'}`);
+    }
+  }
+
+  // 🟩 CHART: Monthly Revenue Data
+  async getMonthlyRevenue(months: number = 6): Promise<any[]> {
+    try {
+      console.log(`🔄 Fetching monthly revenue for last ${months} months...`);
+      const monthsData = [];
+      const currentDate = new Date();
+
+      for (let i = months - 1; i >= 0; i--) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        const { data, error } = await supabase
+          .from('receipts')
+          .select('amount')
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
+
+        if (error) {
+          console.error(`❌ Error fetching revenue for ${date.toLocaleDateString()}:`, error);
+          throw new Error(`Failed to fetch revenue data for ${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}: ${error.message}`);
+        }
+
+        const totalRevenue = data?.reduce((sum, receipt) => sum + (receipt.amount || 0), 0) || 0;
+
+        monthsData.push({
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          value: totalRevenue
+        });
+      }
+
+      console.log('✅ Successfully fetched monthly revenue:', monthsData);
+      return monthsData;
+    } catch (error: any) {
+      console.error('❌ Error fetching monthly revenue:', error);
+      throw new Error(`Database error: ${error.message || 'Unable to fetch revenue data'}`);
+    }
+  }
+
+  // 🟩 CHART: Appointment Status Distribution
+  async getAppointmentStatusDistribution(): Promise<any[]> {
+    try {
+      console.log('🔄 Fetching appointment status distribution...');
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('appointment_status');
+
+      if (error) {
+        console.error('❌ Error fetching appointment status:', error);
+        throw new Error(`Failed to fetch appointment status data: ${error.message}`);
+      }
+
+      const statusCounts: { [key: string]: number } = {};
+      data?.forEach(appointment => {
+        const status = appointment.appointment_status || 'unknown';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+
+      const result = Object.entries(statusCounts).map(([status, count]) => ({
+        name: this.formatAppointmentStatus(status),
+        value: count
+      }));
+
+      console.log('✅ Successfully fetched appointment status distribution:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error fetching appointment status distribution:', error);
+      throw new Error(`Database error: ${error.message || 'Unable to fetch appointment status data'}`);
+    }
+  }
+
+  // Helper method to format appointment status
+  private formatAppointmentStatus(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'Pending',
+      'confirmed': 'Confirmed',
+      'completed': 'Completed',
+      'cancelled': 'Cancelled',
+      'no_show': 'No Show',
+      'unknown': 'Unknown'
+    };
+    return statusMap[status] || status;
+  }
+
   //#endregion
 
   // Admin Dashboard Statistics
@@ -465,6 +586,110 @@ export class SupabaseService {
     return { patients: data ?? [], total: count ?? 0 };
   }
 
+  async getAllPatients(): Promise<{ success: boolean; data?: Patient[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching patients:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Unexpected error fetching patients:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async createPatient(patientData: Partial<Patient>): Promise<{ success: boolean; data?: Patient; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([patientData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating patient:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data };
+    } catch (error) {
+      console.error('Unexpected error creating patient:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async updatePatient(patientId: string, patientData: Partial<Patient>): Promise<{ success: boolean; data?: Patient; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update(patientData)
+        .eq('id', patientId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating patient:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data };
+    } catch (error) {
+      console.error('Unexpected error updating patient:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async softDeletePatient(patientId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          patient_status: 'deleted',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', patientId);
+
+      if (error) {
+        console.error('Error soft deleting patient:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error soft deleting patient:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async restorePatient(patientId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          patient_status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', patientId);
+
+      if (error) {
+        console.error('Error restoring patient:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error restoring patient:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
   async getPatientsAppointment() {
     const { data, error } = await supabase
       .from('patients')
@@ -491,50 +716,219 @@ export class SupabaseService {
     return { patients: data ?? [], total: count ?? 0 };
   }
 
-  async createPatient(
-    id: string,
-    fullName: string,
-    allergies: object | null,
-    chronicConditions: object | null,
-    pastSurgeries: object | null,
-    vaccinationStatus: object | null
-  ): Promise<Patient> {
-    const { data, error } = await supabase
-      .from('patients')
-      .insert([
-        {
-          id,
-          full_name: fullName,
-          allergies,
-          chronic_conditions: chronicConditions,
-          past_surgeries: pastSurgeries,
-          vaccination_status: vaccinationStatus,
-          patient_status: 'Active'
-        }
-      ])
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
 
-
-
-
-  async updatePatient(patientId: string, patientData: Partial<Patient>): Promise<void> {
-    const { error } = await supabase
-      .from('patients')
-      .update(patientData)
-      .eq('id', patientId);
-    if (error) throw error;
-  }
 
   //#endregion
 
   //#region // ============= APPOINTMENT FUNCTIONS ============= //
 
+  // Get all appointments with comprehensive JOIN queries (unified patient and guest appointments)
+  async getAllAppointments(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      // Fetch patient appointments
+      const { data: patientAppointments, error: patientError } = await supabase
+        .from('appointments')
+        .select(`
+          appointment_id,
+          patient_id,
+          doctor_id,
+          slot_id,
+          category_id,
+          phone,
+          email,
+          visit_type,
+          appointment_status,
+          created_at,
+          updated_at,
+          schedule,
+          message,
+          appointment_date,
+          appointment_time,
+          preferred_date,
+          preferred_time,
+          patient:patients(id, full_name, phone, email, gender),
+          doctor:staff_members!appointments_doctor_id_fkey(staff_id, full_name, working_email),
+          category:service_categories(category_id, category_name),
+          slot:doctor_slot_assignments!appointments_slot_id_fkey(
+            doctor_slot_id,
+            slot:slots(slot_id, slot_date, slot_time)
+          )
+        `)
+        .order('created_at', { ascending: false });
 
+      if (patientError) {
+        console.error('Error fetching patient appointments:', patientError);
+        return { success: false, error: patientError.message };
+      }
 
+      // Fetch guest appointments
+      const { data: guestAppointments, error: guestError } = await supabase
+        .from('guest_appointments')
+        .select(`
+          guest_appointment_id,
+          guest_id,
+          doctor_id,
+          slot_id,
+          category_id,
+          phone,
+          email,
+          visit_type,
+          appointment_status,
+          created_at,
+          updated_at,
+          schedule,
+          message,
+          appointment_date,
+          appointment_time,
+          preferred_date,
+          preferred_time,
+          guest:guests(guest_id, full_name, phone, email, gender),
+          doctor:doctor_details!guest_appointments_doctor_id_fkey(
+            doctor_id,
+            staff:staff_members(staff_id, full_name, working_email)
+          ),
+          category:service_categories(category_id, category_name),
+          slot:doctor_slot_assignments!guest_appointments_slot_id_fkey(
+            doctor_slot_id,
+            slot:slots(slot_id, slot_date, slot_time)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (guestError) {
+        console.error('Error fetching guest appointments:', guestError);
+        return { success: false, error: guestError.message };
+      }
+
+      // Transform patient appointments
+      const transformedPatientAppointments = (patientAppointments || []).map((appointment: any) => {
+        const patient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient;
+        const doctor = Array.isArray(appointment.doctor) ? appointment.doctor[0] : appointment.doctor;
+        const category = Array.isArray(appointment.category) ? appointment.category[0] : appointment.category;
+        const slotInfo = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot;
+        const slot = slotInfo?.slot ? (Array.isArray(slotInfo.slot) ? slotInfo.slot[0] : slotInfo.slot) : null;
+
+        return {
+          ...appointment,
+          appointment_type: 'patient' as const,
+          original_table: 'appointments' as const,
+          original_id: appointment.appointment_id,
+          patient_name: patient?.full_name || 'N/A',
+          display_name: patient?.full_name || `Phone: ${appointment.phone}`,
+          patient_phone: patient?.phone || appointment.phone,
+          patient_email: patient?.email || appointment.email,
+          doctor_name: doctor?.full_name || 'Unassigned',
+          category_name: category?.category_name || 'N/A',
+          slot_date: slot?.slot_date || appointment.appointment_date,
+          slot_time: slot?.slot_time || appointment.appointment_time
+        };
+      });
+
+      // Transform guest appointments
+      const transformedGuestAppointments = (guestAppointments || []).map((appointment: any) => {
+        const guest = Array.isArray(appointment.guest) ? appointment.guest[0] : appointment.guest;
+        const doctorDetails = Array.isArray(appointment.doctor) ? appointment.doctor[0] : appointment.doctor;
+        const doctor = doctorDetails?.staff ? (Array.isArray(doctorDetails.staff) ? doctorDetails.staff[0] : doctorDetails.staff) : null;
+        const category = Array.isArray(appointment.category) ? appointment.category[0] : appointment.category;
+        const slotInfo = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot;
+        const slot = slotInfo?.slot ? (Array.isArray(slotInfo.slot) ? slotInfo.slot[0] : slotInfo.slot) : null;
+
+        return {
+          ...appointment,
+          appointment_id: appointment.guest_appointment_id, // Normalize ID field
+          appointment_type: 'guest' as const,
+          original_table: 'guest_appointments' as const,
+          original_id: appointment.guest_appointment_id,
+          guest_name: guest?.full_name || 'N/A',
+          display_name: guest?.full_name || `Phone: ${appointment.phone}`,
+          patient_phone: guest?.phone || appointment.phone,
+          patient_email: guest?.email || appointment.email,
+          doctor_name: doctor?.full_name || 'Unassigned',
+          category_name: category?.category_name || 'N/A',
+          slot_date: slot?.slot_date || appointment.appointment_date,
+          slot_time: slot?.slot_time || appointment.appointment_time
+        };
+      });
+
+      // Combine and sort all appointments by created_at
+      const allAppointments = [...transformedPatientAppointments, ...transformedGuestAppointments]
+        .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
+
+      return { success: true, data: allAppointments };
+    } catch (error) {
+      console.error('Unexpected error fetching appointments:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // Get appointments with pagination and filtering (unified patient and guest appointments)
+  async getAppointments(page: number, itemsPerPage: number, filters?: any): Promise<{ appointments: any[]; total: number }> {
+    try {
+      // For pagination with filtering, we'll use the getAllAppointments method and apply client-side pagination
+      // This ensures consistent filtering across both appointment types
+      const result = await this.getAllAppointments();
+
+      if (!result.success || !result.data) {
+        return { appointments: [], total: 0 };
+      }
+
+      let filteredAppointments = result.data;
+
+      // Apply filters if provided
+      if (filters) {
+        filteredAppointments = result.data.filter((appointment: any) => {
+          // Status filter
+          if (filters.status && appointment.appointment_status !== filters.status) {
+            return false;
+          }
+
+          // Visit type filter
+          if (filters.visit_type && appointment.visit_type !== filters.visit_type) {
+            return false;
+          }
+
+          // Doctor filter
+          if (filters.doctor_id && appointment.doctor_id !== filters.doctor_id) {
+            return false;
+          }
+
+          // Date range filters
+          if (filters.date_from) {
+            const appointmentDate = appointment.appointment_date || appointment.slot_date;
+            if (!appointmentDate || appointmentDate < filters.date_from) {
+              return false;
+            }
+          }
+
+          if (filters.date_to) {
+            const appointmentDate = appointment.appointment_date || appointment.slot_date;
+            if (!appointmentDate || appointmentDate > filters.date_to) {
+              return false;
+            }
+          }
+
+          // Appointment type filter (if provided)
+          if (filters.appointment_type && appointment.appointment_type !== filters.appointment_type) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Apply pagination
+      const start = (page - 1) * itemsPerPage;
+      const paginatedAppointments = filteredAppointments.slice(start, start + itemsPerPage);
+
+      return {
+        appointments: paginatedAppointments,
+        total: filteredAppointments.length
+      };
+    } catch (error) {
+      console.error('Error in getAppointments:', error);
+      return { appointments: [], total: 0 };
+    }
+  }
 
   async getGuestAppointments(): Promise<GuestAppointment[]> {
     const { data, error } = await supabase
@@ -586,9 +980,24 @@ export class SupabaseService {
     return data as Staff[];
   }
 
-  // Alias method for getAllStaff (used by database-init component)
-  async getAllStaff(): Promise<Staff[]> {
-    return this.getStaffMembers();
+  // Updated getAllStaff method to return consistent format
+  async getAllStaff(): Promise<{ success: boolean; data?: Staff[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('staff_members')
+        .select('*')
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching staff:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data as Staff[] || [] };
+    } catch (error) {
+      console.error('Unexpected error fetching staff:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   }
 
   async updateStaffMember(staffId: string, staffData: Partial<Staff>): Promise<void> {
@@ -1046,6 +1455,156 @@ export class SupabaseService {
       .eq('appointment_id', appointmentData.appointment_id);
 
     if (error) throw error;
+  }
+
+  // Admin appointment management methods (unified for both patient and guest appointments)
+  async updateAppointment(appointmentId: string, appointmentData: Partial<any>, appointmentType?: 'patient' | 'guest', originalTable?: 'appointments' | 'guest_appointments'): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const updateData = { ...appointmentData };
+      updateData.updated_at = new Date().toISOString();
+
+      // Determine which table to update
+      let tableName: string;
+      let idField: string;
+
+      if (originalTable) {
+        tableName = originalTable;
+        idField = originalTable === 'appointments' ? 'appointment_id' : 'guest_appointment_id';
+      } else {
+        // Fallback: try to determine from appointmentType or default to appointments
+        tableName = appointmentType === 'guest' ? 'guest_appointments' : 'appointments';
+        idField = appointmentType === 'guest' ? 'guest_appointment_id' : 'appointment_id';
+      }
+
+      // Remove fields that don't belong in the update
+      delete updateData.appointment_type;
+      delete updateData.original_table;
+      delete updateData.original_id;
+      delete updateData.display_name;
+      delete updateData.patient_name;
+      delete updateData.guest_name;
+      delete updateData.doctor_name;
+      delete updateData.category_name;
+      delete updateData.slot_date;
+      delete updateData.slot_time;
+
+      const { data, error } = await supabase
+        .from(tableName)
+        .update(updateData)
+        .eq(idField, appointmentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Error updating ${tableName}:`, error);
+        return { success: false, error: error.message };
+      }
+
+      // Re-fetch the updated appointment with all JOIN data
+      const refreshResult = await this.getAllAppointments();
+      if (refreshResult.success && refreshResult.data) {
+        const updatedAppointment = refreshResult.data.find((apt: any) =>
+          apt.original_id === appointmentId || apt.appointment_id === appointmentId
+        );
+
+        if (updatedAppointment) {
+          return { success: true, data: updatedAppointment };
+        }
+      }
+
+      // Fallback: return basic updated data
+      return { success: true, data: { ...data, appointment_type: appointmentType || 'patient' } };
+    } catch (error) {
+      console.error('Unexpected error updating appointment:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async deleteAppointment(appointmentId: string, appointmentType?: 'patient' | 'guest', originalTable?: 'appointments' | 'guest_appointments'): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Determine which table to delete from
+      let tableName: string;
+      let idField: string;
+
+      if (originalTable) {
+        tableName = originalTable;
+        idField = originalTable === 'appointments' ? 'appointment_id' : 'guest_appointment_id';
+      } else {
+        // Fallback: try to determine from appointmentType or try both tables
+        if (appointmentType === 'guest') {
+          tableName = 'guest_appointments';
+          idField = 'guest_appointment_id';
+        } else {
+          tableName = 'appointments';
+          idField = 'appointment_id';
+        }
+      }
+
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq(idField, appointmentId);
+
+      if (error) {
+        // If deletion failed and we don't know the table, try the other table
+        if (!originalTable && !appointmentType) {
+          const alternateTable = tableName === 'appointments' ? 'guest_appointments' : 'appointments';
+          const alternateIdField = alternateTable === 'appointments' ? 'appointment_id' : 'guest_appointment_id';
+
+          const { error: alternateError } = await supabase
+            .from(alternateTable)
+            .delete()
+            .eq(alternateIdField, appointmentId);
+
+          if (alternateError) {
+            console.error(`Error deleting from both tables:`, error, alternateError);
+            return { success: false, error: `Failed to delete appointment: ${error.message}` };
+          }
+
+          return { success: true };
+        }
+
+        console.error(`Error deleting from ${tableName}:`, error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error deleting appointment:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // Get appointment statistics for admin dashboard
+  async getAppointmentStats(): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('appointment_status, visit_type, created_at');
+
+      if (error) {
+        console.error('Error fetching appointment stats:', error);
+        return { success: false, error: error.message };
+      }
+
+      const stats = {
+        total: data?.length || 0,
+        pending: data?.filter(a => a.appointment_status === 'pending').length || 0,
+        confirmed: data?.filter(a => a.appointment_status === 'confirmed').length || 0,
+        completed: data?.filter(a => a.appointment_status === 'completed').length || 0,
+        cancelled: data?.filter(a => a.appointment_status === 'cancelled').length || 0,
+        no_show: data?.filter(a => a.appointment_status === 'no_show').length || 0,
+        consultation: data?.filter(a => a.visit_type === 'consultation').length || 0,
+        follow_up: data?.filter(a => a.visit_type === 'follow_up').length || 0,
+        emergency: data?.filter(a => a.visit_type === 'emergency').length || 0,
+        routine_checkup: data?.filter(a => a.visit_type === 'routine_checkup').length || 0
+      };
+
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('Unexpected error fetching appointment stats:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   }
 
   // Dashboard Statistics for Doctors

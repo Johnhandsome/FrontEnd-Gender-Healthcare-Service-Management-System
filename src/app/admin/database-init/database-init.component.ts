@@ -132,9 +132,14 @@ export class DatabaseInitComponent {
 
     try {
       // Test connection by trying to fetch staff data
-      const staff = await this.supabaseService.getAllStaff();
-      this.connectionStatus = 'connected';
-      this.addLog(`Database connection successful! Found ${staff.length} staff members.`, 'success');
+      const result = await this.supabaseService.getAllStaff();
+      if (result.success && result.data) {
+        this.connectionStatus = 'connected';
+        this.addLog(`Database connection successful! Found ${result.data.length} staff members.`, 'success');
+      } else {
+        this.connectionStatus = 'failed';
+        this.addLog(`Connection test failed: ${result.error}`, 'error');
+      }
     } catch (error) {
       this.connectionStatus = 'failed';
       this.addLog(`Connection test error: ${error}`, 'error');

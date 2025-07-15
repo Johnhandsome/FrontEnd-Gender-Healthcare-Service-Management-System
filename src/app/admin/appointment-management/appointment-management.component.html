@@ -1,57 +1,186 @@
-<div class="flex flex-col min-h-screen bg-blue-100">
-  <app-header></app-header>
-  <div class="flex flex-row mx-6 gap-6 mb-4">
-    <app-sidebar></app-sidebar>
-    <div class="flex-1">
-      <div class="container mx-auto max-w-7xl">
-        <app-appointment-search-bar
-          (filterChange)="applyFilters($event)"
-          class="mb-6"
-        ></app-appointment-search-bar>
-        <div *ngIf="isLoading" class="text-center py-4 text-gray-500">Loading...</div>
-        <app-appointment-table
-          *ngIf="!isLoading"
-          [paginatedAppointments]="paginatedAppointments"
-          class="mb-4"
-        ></app-appointment-table>
-        <div *ngIf="!isLoading && filteredAppointments.length > 0" class="flex justify-between items-center mt-4">
-          <div class="text-sm text-gray-700">
-            Page {{ currentPage }} of {{ totalPages }}
-          </div>
-          <div class="space-x-2">
-            <button
-              (click)="goToFirstPage()"
-              [disabled]="currentPage === 1"
-              class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-            >
-              First
-            </button>
-            <button
-              (click)="goToPreviousPage()"
-              [disabled]="currentPage === 1"
-              class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              (click)="goToNextPage()"
-              [disabled]="currentPage === totalPages"
-              class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-            >
-              Next
-            </button>
-            <button
-              (click)="goToLastPage()"
-              [disabled]="currentPage === totalPages"
-              class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-            >
-              Last
-            </button>
-          </div>
+<!-- Enhanced Appointment Management Content -->
+<div class="space-y-6 animate-fadeIn">
+  <div class="container mx-auto max-w-full">
+    <!-- Enhanced Search Bar -->
+    <app-appointment-search-bar
+      [totalResults]="filteredAppointments.length"
+      [doctors]="doctors"
+      (filterChange)="applyFilters($event)"
+      (exportData)="exportAppointments()"
+      (addNew)="openCreateAppointmentModal()"
+      class="mb-6"
+    ></app-appointment-search-bar>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+      <div class="flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <span class="text-gray-600 font-medium">Loading appointments...</span>
+      </div>
+    </div>
+
+    <!-- Enhanced Appointment Table -->
+    <app-appointment-table
+      *ngIf="!isLoading"
+      [paginatedAppointments]="paginatedAppointments"
+      [totalAppointments]="filteredAppointments.length"
+      [currentPage]="currentPage"
+      (viewAppointmentEvent)="openViewAppointmentModal($event)"
+      (editAppointmentEvent)="openEditAppointmentModal($event)"
+      (deleteAppointmentEvent)="onDeleteAppointment($event)"
+      (sortChange)="onSortChange($event)"
+      (bulkAction)="onBulkAction($event)"
+      (clearFiltersEvent)="clearAllFilters()"
+    ></app-appointment-table>
+
+    <!-- Enhanced Pagination -->
+    <div
+      *ngIf="!isLoading && filteredAppointments.length > 0"
+      class="bg-white rounded-2xl shadow-xl border border-white/20 px-6 py-4 mt-6"
+    >
+      <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+        <!-- Results Info -->
+        <div class="text-sm text-gray-700">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} to
+          {{ Math.min(currentPage * pageSize, filteredAppointments.length) }} of
+          {{ filteredAppointments.length }} appointments
         </div>
-        <div *ngIf="!isLoading && filteredAppointments.length === 0" class="text-center py-4 text-gray-500">
-          No appointments found.
+
+        <!-- Pagination Controls -->
+        <div class="flex items-center space-x-2">
+          <button
+            (click)="goToFirstPage()"
+            [disabled]="currentPage === 1"
+            class="pagination-button"
+            [class.disabled]="currentPage === 1"
+            title="First page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <button
+            (click)="goToPreviousPage()"
+            [disabled]="currentPage === 1"
+            class="pagination-button"
+            [class.disabled]="currentPage === 1"
+            title="Previous page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Page Numbers -->
+          <div class="flex items-center space-x-1">
+            <button
+              *ngFor="let page of getVisiblePages()"
+              (click)="goToPage(page)"
+              class="pagination-number"
+              [class.active]="page === currentPage"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            (click)="goToNextPage()"
+            [disabled]="currentPage === totalPages"
+            class="pagination-button"
+            [class.disabled]="currentPage === totalPages"
+            title="Next page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+
+          <button
+            (click)="goToLastPage()"
+            [disabled]="currentPage === totalPages"
+            class="pagination-button"
+            [class.disabled]="currentPage === totalPages"
+            title="Last page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+            </svg>
+          </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Appointment Modal -->
+  <div
+    *ngIf="showViewModal && selectedAppointment"
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div
+      class="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto"
+    >
+      <h2 class="text-2xl font-semibold mb-4">Appointment Details</h2>
+      <table class="min-w-full bg-white">
+        <tbody>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">ID</td>
+            <td
+              class="py-2 px-4 truncate max-w-xs"
+              title="{{ selectedAppointment.appointment_id }}"
+            >
+              {{ selectedAppointment.appointment_id }}
+            </td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Patient Name</td>
+            <td class="py-2 px-4">{{ selectedAppointment.patient_name || 'N/A' }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Doctor</td>
+            <td class="py-2 px-4">{{ selectedAppointment.doctor_name || 'Unassigned' }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Date</td>
+            <td class="py-2 px-4">{{ selectedAppointment.appointment_date || selectedAppointment.slot_date || 'N/A' }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Time</td>
+            <td class="py-2 px-4">{{ selectedAppointment.appointment_time || selectedAppointment.slot_time || 'N/A' }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Visit Type</td>
+            <td class="py-2 px-4">{{ selectedAppointment.visit_type }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Status</td>
+            <td class="py-2 px-4">{{ selectedAppointment.appointment_status }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Phone</td>
+            <td class="py-2 px-4">{{ selectedAppointment.patient_phone || selectedAppointment.phone }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Email</td>
+            <td class="py-2 px-4">{{ selectedAppointment.patient_email || selectedAppointment.email }}</td>
+          </tr>
+          <tr *ngIf="selectedAppointment.message" class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Message</td>
+            <td class="py-2 px-4">{{ selectedAppointment.message }}</td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700">Created At</td>
+            <td class="py-2 px-4">{{ selectedAppointment.created_at | date:'medium' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-6 flex justify-end">
+        <button
+          (click)="closeViewModal()"
+          class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
