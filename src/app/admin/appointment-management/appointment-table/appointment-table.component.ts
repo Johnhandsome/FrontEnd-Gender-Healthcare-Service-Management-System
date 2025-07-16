@@ -236,9 +236,9 @@ export class AppointmentTableComponent {
   formatVisitType(visitType: string): string {
     const typeMap: { [key: string]: string } = {
       'consultation': 'Consultation',
-      'follow_up': 'Follow Up',
+      'follow-up': 'Follow Up',
       'emergency': 'Emergency',
-      'routine_checkup': 'Routine Checkup'
+      'routine': 'Routine'
     };
     return typeMap[visitType] || visitType;
   }
@@ -249,10 +249,9 @@ export class AppointmentTableComponent {
   formatStatus(status: string): string {
     const statusMap: { [key: string]: string } = {
       'pending': 'Pending',
-      'confirmed': 'Confirmed',
+      'in_progress': 'In Progress',
       'completed': 'Completed',
-      'cancelled': 'Cancelled',
-      'no_show': 'No Show'
+      'cancelled': 'Cancelled'
     };
     return statusMap[status] || status;
   }
@@ -263,9 +262,9 @@ export class AppointmentTableComponent {
   getVisitTypeClass(visitType: string): string {
     const classMap: { [key: string]: string } = {
       'consultation': 'bg-blue-100 text-blue-800',
-      'follow_up': 'bg-green-100 text-green-800',
+      'follow-up': 'bg-green-100 text-green-800',
       'emergency': 'bg-red-100 text-red-800',
-      'routine_checkup': 'bg-purple-100 text-purple-800'
+      'routine': 'bg-purple-100 text-purple-800'
     };
     return classMap[visitType] || 'bg-gray-100 text-gray-800';
   }
@@ -276,10 +275,9 @@ export class AppointmentTableComponent {
   getStatusClass(status: string): string {
     const classMap: { [key: string]: string } = {
       'pending': 'bg-yellow-100 text-yellow-800',
-      'confirmed': 'bg-green-100 text-green-800',
+      'in_progress': 'bg-purple-100 text-purple-800',
       'completed': 'bg-blue-100 text-blue-800',
-      'cancelled': 'bg-red-100 text-red-800',
-      'no_show': 'bg-gray-100 text-gray-800'
+      'cancelled': 'bg-red-100 text-red-800'
     };
     return classMap[status] || 'bg-gray-100 text-gray-800';
   }

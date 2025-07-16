@@ -1,13 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { SupabaseService } from '../../supabase.service';
+import { Patient } from '../../models/patient.interface';
+import { Staff } from '../../models/staff.interface';
 
 interface DashboardStats {
   todayAppointments: number;
-  pendingCheckIns: number;
+  pendingPayments: number;
   totalPatients: number;
+  activePatients: number;
   availableDoctors: number;
-  recentAppointments: any[];
+  pendingApprovals: number;
+  totalRevenue: number;
+  newPatientsThisMonth: number;
+}
+
+interface RecentAppointment {
+  appointment_id: string;
+  patient_name: string;
+  doctor_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  appointment_status: string;
+  visit_type: string;
+  type: 'patient' | 'guest';
 }
 
 @Component({
@@ -79,10 +96,10 @@ interface DashboardStats {
               <div class="flex-1">
                 <div class="flex items-center space-x-2 mb-2">
                   <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide">Pending Check-ins</h3>
+                  <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide">Pending Payments</h3>
                 </div>
-                <p class="text-3xl font-bold text-gray-900 mb-1">{{ stats.pendingCheckIns }}</p>
-                <p class="text-sm text-yellow-600 font-medium">Awaiting arrival</p>
+                <p class="text-3xl font-bold text-gray-900 mb-1">{{ stats.pendingPayments }}</p>
+                <p class="text-sm text-yellow-600 font-medium">Awaiting payment</p>
               </div>
               <div class="flex-shrink-0">
                 <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -157,7 +174,7 @@ interface DashboardStats {
             </div>
           </div>
           <div class="p-6">
-            <div *ngIf="stats.recentAppointments.length === 0" class="text-center py-12">
+            <div *ngIf="recentAppointments.length === 0" class="text-center py-12">
               <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -166,8 +183,8 @@ interface DashboardStats {
               <p class="text-gray-500 font-medium">No recent appointments found.</p>
               <p class="text-sm text-gray-400 mt-1">New appointments will appear here.</p>
             </div>
-            <div *ngIf="stats.recentAppointments.length > 0" class="space-y-3">
-              <div *ngFor="let appointment of stats.recentAppointments"
+            <div *ngIf="recentAppointments.length > 0" class="space-y-3">
+              <div *ngFor="let appointment of recentAppointments"
                    class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-indigo-50 rounded-xl hover:from-indigo-50 hover:to-purple-50 transition-all duration-300 transform hover:scale-102 border border-gray-100 hover:border-indigo-200">
                 <div class="flex-1">
                   <div class="flex items-center space-x-4">
@@ -181,6 +198,7 @@ interface DashboardStats {
                     <div>
                       <p class="text-sm font-bold text-gray-900">{{ appointment.patient_name }}</p>
                       <p class="text-sm text-indigo-600 font-medium">{{ appointment.visit_type | titlecase }}</p>
+                      <p class="text-xs text-gray-500">Dr. {{ appointment.doctor_name }}</p>
                     </div>
                   </div>
                 </div>
@@ -190,7 +208,7 @@ interface DashboardStats {
                     <p class="text-sm text-gray-500 font-medium" *ngIf="appointment.appointment_time">{{ formatTime(appointment.appointment_time) }}</p>
                   </div>
                   <span class="inline-flex items-center px-3 py-1 rounded-xl text-xs font-bold"
-                        [ngClass]="getStatusColor(appointment.appointment_status)">
+                        [ngClass]="getStatusColorClass(appointment.appointment_status)">
                     {{ appointment.appointment_status | titlecase }}
                   </span>
                 </div>
@@ -229,22 +247,43 @@ interface DashboardStats {
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   loading = true;
   error: string | null = null;
 
   stats: DashboardStats = {
     todayAppointments: 0,
-    pendingCheckIns: 0,
+    pendingPayments: 0,
     totalPatients: 0,
+    activePatients: 0,
     availableDoctors: 0,
-    recentAppointments: []
+    pendingApprovals: 0,
+    totalRevenue: 0,
+    newPatientsThisMonth: 0
   };
 
-  constructor(private router: Router) {}
+  recentAppointments: RecentAppointment[] = [];
+  patients: Patient[] = [];
+  doctors: Staff[] = [];
+  refreshInterval: any;
+
+  constructor(
+    private router: Router,
+    private supabaseService: SupabaseService
+  ) {}
 
   ngOnInit(): void {
     this.loadDashboardData();
+    // Set up real-time refresh every 30 seconds
+    this.refreshInterval = setInterval(() => {
+      this.loadDashboardData();
+    }, 30000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   async loadDashboardData(): Promise<void> {
@@ -252,31 +291,15 @@ export class DashboardComponent implements OnInit {
       this.loading = true;
       this.error = null;
 
-      // Simulate API call with demo data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Load real data from Supabase
+      await Promise.all([
+        this.loadPatients(),
+        this.loadDoctors(),
+        this.loadRecentAppointments()
+      ]);
 
-      this.stats = {
-        todayAppointments: 12,
-        pendingCheckIns: 5,
-        totalPatients: 248,
-        availableDoctors: 3,
-        recentAppointments: [
-          {
-            patient_name: 'John Smith',
-            visit_type: 'consultation',
-            appointment_date: new Date().toISOString(),
-            appointment_time: '09:00',
-            appointment_status: 'confirmed'
-          },
-          {
-            patient_name: 'Sarah Johnson',
-            visit_type: 'follow-up',
-            appointment_date: new Date().toISOString(),
-            appointment_time: '10:30',
-            appointment_status: 'pending'
-          }
-        ]
-      };
+      // Calculate stats after loading all data
+      await this.calculateStats();
 
     } catch (error: any) {
       console.error('❌ Error loading dashboard data:', error);
@@ -286,21 +309,151 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  navigateToAppointments(): void {
-    this.router.navigate(['/receptionist/dashboard/appointments']);
+  async loadPatients(): Promise<void> {
+    try {
+      const result = await this.supabaseService.getAllPatients();
+      if (result.success && result.data) {
+        this.patients = result.data;
+      }
+    } catch (error) {
+      console.error('Error loading patients:', error);
+    }
   }
 
-  navigateToPatientRegistration(): void {
-    this.router.navigate(['/receptionist/dashboard/patient-registration']);
+  async loadDoctors(): Promise<void> {
+    try {
+      const result = await this.supabaseService.getAllStaff();
+      if (result.success && result.data) {
+        this.doctors = result.data.filter(staff => staff.role === 'doctor');
+      }
+    } catch (error) {
+      console.error('Error loading doctors:', error);
+    }
+  }
+
+  async calculateStats(): Promise<void> {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const todayString = today.toISOString().split('T')[0];
+
+    // Calculate today's appointments from real data
+    const todayAppointments = this.recentAppointments.filter(apt =>
+      apt.appointment_date === todayString
+    ).length;
+
+    // Calculate pending appointments
+    const pendingApprovals = this.recentAppointments.filter(apt =>
+      apt.appointment_status === 'pending'
+    ).length;
+
+    this.stats = {
+      totalPatients: this.patients.length,
+      activePatients: this.patients.filter(p => p.patient_status === 'active').length,
+      availableDoctors: this.doctors.filter(d => d.is_available).length,
+      newPatientsThisMonth: this.patients.filter(p => {
+        const createdDate = new Date(p.created_at || '');
+        return createdDate.getMonth() === currentMonth && createdDate.getFullYear() === currentYear;
+      }).length,
+      todayAppointments: todayAppointments,
+      pendingApprovals: pendingApprovals,
+      // Simulated data for payment/revenue - would be calculated from real payment data
+      pendingPayments: Math.floor(Math.random() * 15) + 3,
+      totalRevenue: Math.floor(Math.random() * 50000) + 25000
+    };
+  }
+
+  async loadRecentAppointments(): Promise<void> {
+    try {
+      // Get recent appointments from Supabase
+      const appointmentsResult = await this.supabaseService.getAllAppointments();
+
+      if (appointmentsResult && appointmentsResult.length > 0) {
+        // Transform appointments data for display
+        this.recentAppointments = appointmentsResult
+          .slice(0, 6) // Get latest 6 appointments
+          .map((apt: any) => ({
+            appointment_id: apt.appointment_id || apt.guest_appointment_id,
+            patient_name: apt.patient?.full_name || apt.guest?.full_name || 'Unknown Patient',
+            doctor_name: apt.doctor?.staff?.full_name || 'Unknown Doctor',
+            appointment_date: apt.appointment_date,
+            appointment_time: apt.appointment_time,
+            appointment_status: apt.appointment_status,
+            visit_type: apt.visit_type,
+            type: apt.patient ? 'patient' : 'guest'
+          }));
+      } else {
+        this.recentAppointments = [];
+      }
+    } catch (error) {
+      console.error('Error loading recent appointments:', error);
+      this.recentAppointments = [];
+    }
+  }
+
+  navigateToAppointments(): void {
+    this.router.navigate(['/receptionist/dashboard/appointment-management']);
+  }
+
+  navigateToPatientManagement(): void {
+    this.router.navigate(['/receptionist/dashboard/patient-management']);
+  }
+
+  navigateToPaymentManagement(): void {
+    this.router.navigate(['/receptionist/dashboard/payment-management']);
   }
 
   formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  }
+
+  formatTime(dateString: string): string {
+    return new Date(dateString).toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  getActivityIcon(type: string): string {
+    switch (type) {
+      case 'appointment':
+        return 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z';
+      case 'payment':
+        return 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z';
+      case 'patient':
+        return 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z';
+      default:
+        return 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+    }
+  }
+
+  getStatusColorClass(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      case 'in_progress':
+        return 'bg-purple-100 text-purple-800 border border-purple-200';
+      case 'completed':
+        return 'bg-green-100 text-green-800 border border-green-200';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+    }
   }
 
   formatTime(timeString: string): string {
-    return timeString;
+    if (!timeString) return '';
+    try {
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return timeString;
+    }
   }
 
   getCurrentDate(): string {
@@ -311,20 +464,5 @@ export class DashboardComponent implements OnInit {
       month: 'long',
       day: 'numeric'
     });
-  }
-
-  getStatusColor(status: string): string {
-    switch (status.toLowerCase()) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border border-red-200';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border border-gray-200';
-    }
   }
 }

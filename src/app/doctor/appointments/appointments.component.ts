@@ -30,7 +30,9 @@ export class AppointmentsComponent implements OnInit {
   appointments: AppointmentDisplay[] = [];
   filteredAppointments: AppointmentDisplay[] = [];
   loading = true;
+  updating = false;
   error: string | null = null;
+  successMessage: string | null = null;
   doctorId: string | null = null;
 
   // Filter properties
@@ -43,19 +45,18 @@ export class AppointmentsComponent implements OnInit {
   statusOptions = [
     { value: '', label: 'All Statuses' },
     { value: 'pending', label: 'Pending' },
-    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'in_progress', label: 'In Progress' },
     { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' },
-    { value: 'no_show', label: 'No Show' }
+    { value: 'cancelled', label: 'Cancelled' }
   ];
 
   // Visit type options
   visitTypeOptions = [
     { value: '', label: 'All Types' },
     { value: 'consultation', label: 'Consultation' },
-    { value: 'follow_up', label: 'Follow Up' },
+    { value: 'follow-up', label: 'Follow Up' },
     { value: 'emergency', label: 'Emergency' },
-    { value: 'routine_checkup', label: 'Routine Checkup' }
+    { value: 'routine', label: 'Routine' }
   ];
 
   // Modal properties
@@ -63,7 +64,10 @@ export class AppointmentsComponent implements OnInit {
   selectedAppointment: AppointmentDisplay | null = null;
   updateForm = {
     appointment_status: '',
-    message: ''
+    visit_type: '',
+    message: '',
+    appointment_date: '',
+    appointment_time: ''
   };
 
   constructor(
@@ -134,7 +138,10 @@ export class AppointmentsComponent implements OnInit {
     this.selectedAppointment = appointment;
     this.updateForm = {
       appointment_status: appointment.appointment_status,
-      message: appointment.message || ''
+      visit_type: appointment.visit_type,
+      message: appointment.message || '',
+      appointment_date: appointment.appointment_date || '',
+      appointment_time: appointment.appointment_time || ''
     };
     this.showUpdateModal = true;
   }
@@ -142,21 +149,43 @@ export class AppointmentsComponent implements OnInit {
   closeUpdateModal() {
     this.showUpdateModal = false;
     this.selectedAppointment = null;
+    this.error = null;
+    this.successMessage = null;
+    this.updating = false;
     this.updateForm = {
       appointment_status: '',
-      message: ''
+      visit_type: '',
+      message: '',
+      appointment_date: '',
+      appointment_time: ''
     };
   }
 
   async updateAppointment() {
     if (!this.selectedAppointment) return;
 
+    this.updating = true;
+    this.error = null;
+    this.successMessage = null;
+
     try {
-      await this.supabaseService.updateAppointmentStatus({
+      // Prepare update data with all fields
+      const updateData: any = {
         appointment_id: this.selectedAppointment.appointment_id,
         appointment_status: this.updateForm.appointment_status as ProcessStatus,
+        visit_type: this.updateForm.visit_type as VisitType,
         message: this.updateForm.message
-      });
+      };
+
+      // Add date and time if provided
+      if (this.updateForm.appointment_date) {
+        updateData.appointment_date = this.updateForm.appointment_date;
+      }
+      if (this.updateForm.appointment_time) {
+        updateData.appointment_time = this.updateForm.appointment_time;
+      }
+
+      await this.supabaseService.updateAppointmentStatus(updateData);
 
       // Update local data
       const index = this.appointments.findIndex(a => a.appointment_id === this.selectedAppointment!.appointment_id);
@@ -164,26 +193,36 @@ export class AppointmentsComponent implements OnInit {
         this.appointments[index] = {
           ...this.appointments[index],
           appointment_status: this.updateForm.appointment_status,
-          message: this.updateForm.message
+          visit_type: this.updateForm.visit_type,
+          message: this.updateForm.message,
+          appointment_date: this.updateForm.appointment_date || this.appointments[index].appointment_date,
+          appointment_time: this.updateForm.appointment_time || this.appointments[index].appointment_time
         };
         this.applyFilters();
       }
 
-      this.closeUpdateModal();
+      this.successMessage = 'Appointment updated successfully!';
+
+      // Close modal after a brief delay to show success message
+      setTimeout(() => {
+        this.closeUpdateModal();
+      }, 1500);
+
     } catch (error: any) {
       this.error = error.message || 'Failed to update appointment';
       console.error('Update appointment error:', error);
+    } finally {
+      this.updating = false;
     }
   }
 
   getStatusColor(status: string): string {
     switch (status) {
-      case 'confirmed': return 'text-green-600 bg-green-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      case 'completed': return 'text-blue-600 bg-blue-100';
-      case 'cancelled': return 'text-red-600 bg-red-100';
-      case 'no_show': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'pending': return 'text-yellow-700 bg-yellow-100 border-yellow-200';
+      case 'in_progress': return 'text-purple-700 bg-purple-100 border-purple-200';
+      case 'completed': return 'text-green-700 bg-green-100 border-green-200';
+      case 'cancelled': return 'text-red-700 bg-red-100 border-red-200';
+      default: return 'text-gray-700 bg-gray-100 border-gray-200';
     }
   }
 

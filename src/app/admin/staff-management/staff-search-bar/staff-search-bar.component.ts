@@ -19,12 +19,15 @@ export class StaffSearchBarComponent implements OnInit, OnDestroy {
     searchTerm: string;
     selectedRole: string;
     selectedStatus: string;
+    selectedAvailability: string;
   }>();
   @Output() addStaff = new EventEmitter<void>();
+  @Output() exportData = new EventEmitter<void>();
 
   searchTerm = '';
   selectedRole = '';
   selectedStatus = '';
+  selectedAvailability = '';
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
@@ -50,11 +53,33 @@ export class StaffSearchBarComponent implements OnInit, OnDestroy {
     this.addStaff.emit();
   }
 
+  onExportData() {
+    this.exportData.emit();
+  }
+
+  clearSearch() {
+    this.searchTerm = '';
+    this.emitFilters();
+  }
+
+  clearFilters() {
+    this.searchTerm = '';
+    this.selectedRole = '';
+    this.selectedStatus = '';
+    this.selectedAvailability = '';
+    this.emitFilters();
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.searchTerm || this.selectedRole || this.selectedStatus || this.selectedAvailability);
+  }
+
   private emitFilters() {
     this.filterChange.emit({
       searchTerm: this.searchTerm,
       selectedRole: this.selectedRole,
-      selectedStatus: this.selectedStatus
+      selectedStatus: this.selectedStatus,
+      selectedAvailability: this.selectedAvailability
     });
   }
 }

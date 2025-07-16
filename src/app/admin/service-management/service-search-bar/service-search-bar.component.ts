@@ -5,6 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
+export interface ServiceFilters {
+  searchTerm: string;
+  selectedCategory: string;
+  selectedStatus: string;
+}
+
 @Component({
   selector: 'app-service-search-bar',
   standalone: true,
@@ -14,46 +20,68 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 })
 export class ServiceSearchBarComponent implements OnInit, OnDestroy {
   @Input() categories: Category[] = [];
-  @Output() filterChange = new EventEmitter<{
-    searchTerm: string;
-    selectedCategory: string;
-    selectedStatus: string;
-  }>();
+  @Input() totalResults: number = 0;
+  @Output() filterChange = new EventEmitter<ServiceFilters>();
   @Output() addService = new EventEmitter<void>();
+  @Output() addCategory = new EventEmitter<void>();
+  @Output() exportData = new EventEmitter<void>();
 
-  searchTerm = '';
+  // Search and filter properties
+  searchQuery = '';
   selectedCategory = '';
   selectedStatus = '';
+  showAdvancedFilters = false;
+
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged()
-    ).subscribe(() => this.emitFilters());
+    ).subscribe(() => this.applyFilters());
   }
 
   ngOnDestroy() {
     this.searchSubject.complete();
   }
 
-  onSearch() {
-    this.searchSubject.next(this.searchTerm);
+  onSearchInput() {
+    this.searchSubject.next(this.searchQuery);
   }
 
-  onFilter() {
-    this.emitFilters();
+  applyFilters() {
+    this.filterChange.emit({
+      searchTerm: this.searchQuery.trim(),
+      selectedCategory: this.selectedCategory,
+      selectedStatus: this.selectedStatus
+    });
+  }
+
+  clearFilters() {
+    this.searchQuery = '';
+    this.selectedCategory = '';
+    this.selectedStatus = '';
+    this.applyFilters();
+  }
+
+  toggleAdvancedFilters() {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
   }
 
   onAddService() {
     this.addService.emit();
   }
 
-  private emitFilters() {
-    this.filterChange.emit({
-      searchTerm: this.searchTerm.trim(),
-      selectedCategory: this.selectedCategory,
-      selectedStatus: this.selectedStatus
-    });
+  onAddCategory() {
+    this.addCategory.emit();
+  }
+
+  onExportData() {
+    this.exportData.emit();
+  }
+
+  // Utility methods
+  hasActiveFilters(): boolean {
+    return !!(this.searchQuery.trim() || this.selectedCategory || this.selectedStatus);
   }
 }

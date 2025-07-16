@@ -58,3 +58,37 @@ export enum Speciality {
   ENDOCRINOLOGIST = 'endocrinologist',
   SEXUAL_HEALTH_SPECIALIST = 'sexual_health_specialist'
 }
+
+// Edge Function interfaces for staff creation
+export interface CreateStaffRequest {
+  full_name: string;
+  working_email: string;
+  role: string;
+  years_experience?: number;
+  hired_at: string;
+  is_available: boolean;
+  staff_status: string;
+  gender?: string;
+  languages?: string[];
+  phone?: string;
+  imageFile?: File; // For image upload
+}
+
+export interface CreateStaffResponse {
+  success: boolean;
+  data?: {
+    staff: Staff;
+    auth_user: {
+      id: string;
+      email: string;
+    };
+    image_url?: string;
+    avatar_generated?: boolean;
+  };
+  error?: {
+    code: string;
+    message: string;
+    timestamp: string;
+    details?: any;
+  };
+}

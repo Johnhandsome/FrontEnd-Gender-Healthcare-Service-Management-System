@@ -9,7 +9,7 @@ export class AdminAuthGuard implements CanActivate {
     const role = localStorage.getItem('role');
     const staffId = localStorage.getItem('staff_id');
 
-    if (role === 'admin' || role === 'manager') {
+    if (role === 'admin') {
       return true;
     }
 

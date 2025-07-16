@@ -221,13 +221,7 @@ export class PatientTableComponent {
     this.bulkAction.emit({ action: 'export', patientIds: selectedIds });
   }
 
-  /**
-   * Handle bulk status update
-   */
-  bulkStatusUpdate(): void {
-    const selectedIds = Array.from(this.selectedPatients);
-    this.bulkAction.emit({ action: 'status_update', patientIds: selectedIds });
-  }
+
 
   /**
    * Handle bulk deactivate

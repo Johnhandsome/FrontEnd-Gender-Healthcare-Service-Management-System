@@ -29,7 +29,7 @@ export class AppointmentSearchBarComponent implements OnInit {
 
   @Output() filterChange = new EventEmitter<AppointmentFilters>();
   @Output() exportData = new EventEmitter<void>();
-  @Output() addNew = new EventEmitter<void>();
+
 
   // Filter properties
   searchQuery: string = '';
@@ -103,10 +103,5 @@ export class AppointmentSearchBarComponent implements OnInit {
     this.exportData.emit();
   }
 
-  /**
-   * Add new appointment
-   */
-  addAppointment() {
-    this.addNew.emit();
-  }
+
 }

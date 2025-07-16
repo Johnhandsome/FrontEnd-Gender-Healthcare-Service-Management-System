@@ -2,7 +2,7 @@ import { Patient } from './models/patient.interface';
 import { Injectable } from '@angular/core';
 import { supabase } from './supabase-client';
 import { from, Observable } from 'rxjs';
-import { Staff, DoctorDetails, Doctor, Role } from './models/staff.interface';
+import { Staff, DoctorDetails, Doctor, Role, CreateStaffRequest, CreateStaffResponse } from './models/staff.interface';
 import { Service } from './models/service.interface';
 import { Category } from './models/category.interface';
 import { Appointment, Guest, GuestAppointment, CreateAppointmentRequest, UpdateAppointmentRequest, VisitType, ProcessStatus, ScheduleEnum } from './models/appointment.interface';
@@ -451,10 +451,9 @@ export class SupabaseService {
   private formatAppointmentStatus(status: string): string {
     const statusMap: { [key: string]: string } = {
       'pending': 'Pending',
-      'confirmed': 'Confirmed',
+      'in_progress': 'In Progress',
       'completed': 'Completed',
       'cancelled': 'Cancelled',
-      'no_show': 'No Show',
       'unknown': 'Unknown'
     };
     return statusMap[status] || status;
@@ -722,9 +721,12 @@ export class SupabaseService {
 
   //#region // ============= APPOINTMENT FUNCTIONS ============= //
 
+
+
   // Get all appointments with comprehensive JOIN queries (unified patient and guest appointments)
   async getAllAppointments(): Promise<{ success: boolean; data?: any[]; error?: string }> {
     try {
+
       // Fetch patient appointments
       const { data: patientAppointments, error: patientError } = await supabase
         .from('appointments')
@@ -747,9 +749,9 @@ export class SupabaseService {
           preferred_date,
           preferred_time,
           patient:patients(id, full_name, phone, email, gender),
-          doctor:staff_members!appointments_doctor_id_fkey(staff_id, full_name, working_email),
+          doctor:doctor_details(doctor_id, staff:staff_members(staff_id, full_name, working_email)),
           category:service_categories(category_id, category_name),
-          slot:doctor_slot_assignments!appointments_slot_id_fkey(
+          slot:doctor_slot_assignments(
             doctor_slot_id,
             slot:slots(slot_id, slot_date, slot_time)
           )
@@ -783,12 +785,9 @@ export class SupabaseService {
           preferred_date,
           preferred_time,
           guest:guests(guest_id, full_name, phone, email, gender),
-          doctor:doctor_details!guest_appointments_doctor_id_fkey(
-            doctor_id,
-            staff:staff_members(staff_id, full_name, working_email)
-          ),
+          doctor:doctor_details(doctor_id, staff:staff_members(staff_id, full_name, working_email)),
           category:service_categories(category_id, category_name),
-          slot:doctor_slot_assignments!guest_appointments_slot_id_fkey(
+          slot:doctor_slot_assignments(
             doctor_slot_id,
             slot:slots(slot_id, slot_date, slot_time)
           )
@@ -803,7 +802,8 @@ export class SupabaseService {
       // Transform patient appointments
       const transformedPatientAppointments = (patientAppointments || []).map((appointment: any) => {
         const patient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient;
-        const doctor = Array.isArray(appointment.doctor) ? appointment.doctor[0] : appointment.doctor;
+        const doctorDetails = Array.isArray(appointment.doctor) ? appointment.doctor[0] : appointment.doctor;
+        const doctorStaff = doctorDetails?.staff ? (Array.isArray(doctorDetails.staff) ? doctorDetails.staff[0] : doctorDetails.staff) : null;
         const category = Array.isArray(appointment.category) ? appointment.category[0] : appointment.category;
         const slotInfo = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot;
         const slot = slotInfo?.slot ? (Array.isArray(slotInfo.slot) ? slotInfo.slot[0] : slotInfo.slot) : null;
@@ -817,7 +817,7 @@ export class SupabaseService {
           display_name: patient?.full_name || `Phone: ${appointment.phone}`,
           patient_phone: patient?.phone || appointment.phone,
           patient_email: patient?.email || appointment.email,
-          doctor_name: doctor?.full_name || 'Unassigned',
+          doctor_name: doctorStaff?.full_name || 'Unassigned',
           category_name: category?.category_name || 'N/A',
           slot_date: slot?.slot_date || appointment.appointment_date,
           slot_time: slot?.slot_time || appointment.appointment_time
@@ -828,7 +828,7 @@ export class SupabaseService {
       const transformedGuestAppointments = (guestAppointments || []).map((appointment: any) => {
         const guest = Array.isArray(appointment.guest) ? appointment.guest[0] : appointment.guest;
         const doctorDetails = Array.isArray(appointment.doctor) ? appointment.doctor[0] : appointment.doctor;
-        const doctor = doctorDetails?.staff ? (Array.isArray(doctorDetails.staff) ? doctorDetails.staff[0] : doctorDetails.staff) : null;
+        const doctorStaff = doctorDetails?.staff ? (Array.isArray(doctorDetails.staff) ? doctorDetails.staff[0] : doctorDetails.staff) : null;
         const category = Array.isArray(appointment.category) ? appointment.category[0] : appointment.category;
         const slotInfo = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot;
         const slot = slotInfo?.slot ? (Array.isArray(slotInfo.slot) ? slotInfo.slot[0] : slotInfo.slot) : null;
@@ -843,12 +843,14 @@ export class SupabaseService {
           display_name: guest?.full_name || `Phone: ${appointment.phone}`,
           patient_phone: guest?.phone || appointment.phone,
           patient_email: guest?.email || appointment.email,
-          doctor_name: doctor?.full_name || 'Unassigned',
+          doctor_name: doctorStaff?.full_name || 'Unassigned',
           category_name: category?.category_name || 'N/A',
           slot_date: slot?.slot_date || appointment.appointment_date,
           slot_time: slot?.slot_time || appointment.appointment_time
         };
       });
+
+      // Doctor information is now included in the JOIN queries above
 
       // Combine and sort all appointments by created_at
       const allAppointments = [...transformedPatientAppointments, ...transformedGuestAppointments]
@@ -1000,22 +1002,243 @@ export class SupabaseService {
     }
   }
 
-  async updateStaffMember(staffId: string, staffData: Partial<Staff>): Promise<void> {
-    const { error } = await supabase
-      .from('staff_members')
-      .update(staffData)
-      .eq('staff_id', staffId);
-    if (error) throw error;
+  // Enhanced staff management methods with consistent response format
+  async updateStaffMember(staffId: string, staffData: Partial<Staff>): Promise<{ success: boolean; data?: Staff; error?: string }> {
+    try {
+      const updateData = {
+        ...staffData,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('staff_members')
+        .update(updateData)
+        .eq('staff_id', staffId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating staff member:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data as Staff };
+    } catch (error) {
+      console.error('Unexpected error updating staff member:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   }
 
-  async addStaffMember(staffData: Omit<Staff, 'staff_id' | 'created_at' | 'updated_at'>): Promise<Staff> {
-    const { data, error } = await supabase
-      .from('staff_members')
-      .insert([staffData])
-      .select()
-      .single();
-    if (error) throw error;
-    return data as Staff;
+  // Legacy method - kept for backward compatibility
+  async addStaffMember(staffData: Omit<Staff, 'staff_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data?: Staff; error?: string }> {
+    try {
+      const newStaffData = {
+        ...staffData,
+        staff_id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('staff_members')
+        .insert([newStaffData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding staff member:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data as Staff };
+    } catch (error) {
+      console.error('Unexpected error adding staff member:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  // New method using Edge Function for staff creation with authentication and image upload
+  async createStaffWithEdgeFunction(staffData: CreateStaffRequest): Promise<CreateStaffResponse> {
+    try {
+      const formData = new FormData();
+
+      // Add staff data fields
+      formData.append('full_name', staffData.full_name);
+      formData.append('working_email', staffData.working_email);
+      formData.append('role', staffData.role);
+      formData.append('years_experience', staffData.years_experience?.toString() || '0');
+      formData.append('hired_at', staffData.hired_at);
+      formData.append('is_available', staffData.is_available.toString());
+      formData.append('staff_status', staffData.staff_status);
+      formData.append('gender', staffData.gender || '');
+
+      // Add languages as JSON string
+      if (staffData.languages && staffData.languages.length > 0) {
+        formData.append('languages', JSON.stringify(staffData.languages));
+      }
+
+      // Add phone if provided
+      if (staffData.phone) {
+        formData.append('phone', staffData.phone);
+      }
+
+      // Add image file if provided
+      if (staffData.imageFile) {
+        formData.append('image', staffData.imageFile);
+      }
+
+      // Call the Edge Function
+      const { data, error } = await supabase.functions.invoke('create-staff', {
+        body: formData
+      });
+
+      if (error) {
+        console.error('Edge Function error:', error);
+
+        // Check if it's a network/deployment error
+        if (error.message?.includes('Failed to send a request') ||
+            error.message?.includes('FunctionsHttpError') ||
+            error.message?.includes('not found')) {
+          return {
+            success: false,
+            error: {
+              code: 'EDGE_FUNCTION_NOT_DEPLOYED',
+              message: 'Edge Function is not deployed. Please deploy the create-staff function or use the fallback method.',
+              timestamp: new Date().toISOString(),
+              details: error
+            }
+          };
+        }
+
+        return {
+          success: false,
+          error: {
+            code: 'EDGE_FUNCTION_ERROR',
+            message: error.message || 'Failed to create staff member',
+            timestamp: new Date().toISOString(),
+            details: error
+          }
+        };
+      }
+
+      if (!data.success) {
+        return {
+          success: false,
+          error: data.error || {
+            code: 'UNKNOWN_ERROR',
+            message: 'Unknown error occurred',
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data
+      };
+
+    } catch (error: any) {
+      console.error('Unexpected error creating staff:', error);
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error.message || 'Network error occurred',
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+  }
+
+  // Enhanced staff creation method with avatar generation (fallback for Edge Function)
+  async createStaffWithAuth(staffData: Omit<Staff, 'staff_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data?: Staff; error?: string }> {
+    try {
+      // Generate staff ID
+      const staff_id = crypto.randomUUID();
+
+      // Generate avatar URL from initials if no image provided
+      let image_link = staffData.image_link;
+      if (!image_link) {
+        const initials = staffData.full_name
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase())
+          .join('')
+          .substring(0, 2);
+        const encoded = encodeURIComponent(initials);
+        image_link = `https://ui-avatars.com/api/?name=${encoded}&background=random&size=256`;
+      }
+
+      const newStaffData = {
+        ...staffData,
+        staff_id,
+        image_link,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Create staff member record
+      const { data, error } = await supabase
+        .from('staff_members')
+        .insert([newStaffData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating staff member:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('✅ Staff member created successfully:', {
+        staff_id: data.staff_id,
+        name: data.full_name,
+        email: data.working_email,
+        role: data.role
+      });
+
+      return { success: true, data: data as Staff };
+    } catch (error) {
+      console.error('Unexpected error creating staff member:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }
+
+  async deleteStaffMember(staffId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First check if staff member exists
+      const { data: existingStaff, error: checkError } = await supabase
+        .from('staff_members')
+        .select('staff_id, full_name')
+        .eq('staff_id', staffId)
+        .single();
+
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          return { success: false, error: 'Staff member not found' };
+        }
+        console.error('Error checking staff member:', checkError);
+        return { success: false, error: checkError.message };
+      }
+
+      // Perform soft delete by updating status instead of hard delete
+      const { error: updateError } = await supabase
+        .from('staff_members')
+        .update({
+          staff_status: 'inactive',
+          is_available: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('staff_id', staffId);
+
+      if (updateError) {
+        console.error('Error soft deleting staff member:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error deleting staff member:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
   }
 
   // Doctor Profile Methods
@@ -1057,20 +1280,40 @@ export class SupabaseService {
 
   //#endregion
 
-  async getMedicalService(): Promise<Service[]> {
-    const { data, error } = await supabase
-      .from('medical_services')
-      .select('*');
-    if (error) throw error;
-    return data as Service[];
-  }
+  // ============= MEDICAL SERVICES FUNCTIONS ============= //
 
+  async getMedicalServices(): Promise<{ success: boolean; data?: Service[]; error?: string }> {
+    try {
+      // Fetch services and categories separately
+      const [servicesResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('medical_services')
+          .select('*')
+          .order('service_name', { ascending: true }),
+        supabase
+          .from('service_categories')
+          .select('category_id, category_name')
+      ]);
 
+      if (servicesResult.error) {
+        console.error('❌ Error fetching medical services:', servicesResult.error);
+        return { success: false, error: servicesResult.error.message };
+      }
 
-  async addMedicalService(service: Service): Promise<void> {
-    const { error } = await supabase
-      .from('medical_services')
-      .insert([{
+      if (categoriesResult.error) {
+        console.error('❌ Error fetching service categories:', categoriesResult.error);
+        return { success: false, error: categoriesResult.error.message };
+      }
+
+      // Create a map of categories for quick lookup
+      const categoryMap = new Map();
+      (categoriesResult.data || []).forEach((cat: any) => {
+        categoryMap.set(cat.category_id, cat.category_name);
+      });
+
+      // Transform data to include category information
+      const services = (servicesResult.data || []).map((service: any) => ({
+        service_id: service.service_id,
         category_id: service.category_id,
         service_name: service.service_name,
         service_description: service.service_description,
@@ -1078,9 +1321,323 @@ export class SupabaseService {
         duration_minutes: service.duration_minutes,
         is_active: service.is_active,
         image_link: service.image_link,
-        excerpt: service.excerpt
-      }]);
-    if (error) throw error;
+        excerpt: service.excerpt,
+        category_name: categoryMap.get(service.category_id) || 'Unknown'
+      }));
+
+      return { success: true, data: services };
+    } catch (error: any) {
+      console.error('❌ Error in getMedicalServices:', error);
+      return { success: false, error: error.message || 'Failed to fetch medical services' };
+    }
+  }
+
+  async getMedicalServiceById(serviceId: string): Promise<{ success: boolean; data?: Service; error?: string }> {
+    try {
+      // Fetch service and category separately
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('medical_services')
+        .select('*')
+        .eq('service_id', serviceId)
+        .single();
+
+      if (serviceError) {
+        console.error('❌ Error fetching medical service:', serviceError);
+        return { success: false, error: serviceError.message };
+      }
+
+      if (!serviceData) {
+        return { success: false, error: 'Service not found' };
+      }
+
+      // Fetch category name
+      const { data: categoryData } = await supabase
+        .from('service_categories')
+        .select('category_name')
+        .eq('category_id', serviceData.category_id)
+        .single();
+
+      const service = {
+        service_id: serviceData.service_id,
+        category_id: serviceData.category_id,
+        service_name: serviceData.service_name,
+        service_description: serviceData.service_description,
+        service_cost: serviceData.service_cost,
+        duration_minutes: serviceData.duration_minutes,
+        is_active: serviceData.is_active,
+        image_link: serviceData.image_link,
+        excerpt: serviceData.excerpt,
+        category_name: categoryData?.category_name || 'Unknown'
+      };
+
+      return { success: true, data: service };
+    } catch (error: any) {
+      console.error('❌ Error in getMedicalServiceById:', error);
+      return { success: false, error: error.message || 'Failed to fetch medical service' };
+    }
+  }
+
+  async createMedicalService(service: Omit<Service, 'service_id'>): Promise<{ success: boolean; data?: Service; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('medical_services')
+        .insert([{
+          category_id: service.category_id,
+          service_name: service.service_name,
+          service_description: service.service_description,
+          service_cost: service.service_cost,
+          duration_minutes: service.duration_minutes,
+          is_active: service.is_active,
+          image_link: service.image_link,
+          excerpt: service.excerpt
+        }])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating medical service:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Fetch category name
+      const { data: categoryData } = await supabase
+        .from('service_categories')
+        .select('category_name')
+        .eq('category_id', data.category_id)
+        .single();
+
+      const createdService = {
+        service_id: data.service_id,
+        category_id: data.category_id,
+        service_name: data.service_name,
+        service_description: data.service_description,
+        service_cost: data.service_cost,
+        duration_minutes: data.duration_minutes,
+        is_active: data.is_active,
+        image_link: data.image_link,
+        excerpt: data.excerpt,
+        category_name: categoryData?.category_name || 'Unknown'
+      };
+
+      return { success: true, data: createdService };
+    } catch (error: any) {
+      console.error('❌ Error in createMedicalService:', error);
+      return { success: false, error: error.message || 'Failed to create medical service' };
+    }
+  }
+
+  async updateMedicalService(service: Service): Promise<{ success: boolean; data?: Service; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('medical_services')
+        .update({
+          category_id: service.category_id,
+          service_name: service.service_name,
+          service_description: service.service_description,
+          service_cost: service.service_cost,
+          duration_minutes: service.duration_minutes,
+          is_active: service.is_active,
+          image_link: service.image_link,
+          excerpt: service.excerpt
+        })
+        .eq('service_id', service.service_id)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating medical service:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Fetch category name
+      const { data: categoryData } = await supabase
+        .from('service_categories')
+        .select('category_name')
+        .eq('category_id', data.category_id)
+        .single();
+
+      const updatedService = {
+        service_id: data.service_id,
+        category_id: data.category_id,
+        service_name: data.service_name,
+        service_description: data.service_description,
+        service_cost: data.service_cost,
+        duration_minutes: data.duration_minutes,
+        is_active: data.is_active,
+        image_link: data.image_link,
+        excerpt: data.excerpt,
+        category_name: categoryData?.category_name || 'Unknown'
+      };
+
+      return { success: true, data: updatedService };
+    } catch (error: any) {
+      console.error('❌ Error in updateMedicalService:', error);
+      return { success: false, error: error.message || 'Failed to update medical service' };
+    }
+  }
+
+  async deleteMedicalService(serviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('medical_services')
+        .delete()
+        .eq('service_id', serviceId);
+
+      if (error) {
+        console.error('❌ Error deleting medical service:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Error in deleteMedicalService:', error);
+      return { success: false, error: error.message || 'Failed to delete medical service' };
+    }
+  }
+
+  async toggleMedicalServiceStatus(serviceId: string, isActive: boolean): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('medical_services')
+        .update({ is_active: isActive })
+        .eq('service_id', serviceId);
+
+      if (error) {
+        console.error('❌ Error toggling medical service status:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Error in toggleMedicalServiceStatus:', error);
+      return { success: false, error: error.message || 'Failed to toggle service status' };
+    }
+  }
+
+  // ============= SERVICE CATEGORIES FUNCTIONS ============= //
+
+  async getServiceCategories(): Promise<{ success: boolean; data?: Category[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('service_categories')
+        .select('*')
+        .order('category_name', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error fetching service categories:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('❌ Error in getServiceCategories:', error);
+      return { success: false, error: error.message || 'Failed to fetch service categories' };
+    }
+  }
+
+  async getServiceCategoryById(categoryId: string): Promise<{ success: boolean; data?: Category; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('service_categories')
+        .select('*')
+        .eq('category_id', categoryId)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching service category:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (!data) {
+        return { success: false, error: 'Category not found' };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('❌ Error in getServiceCategoryById:', error);
+      return { success: false, error: error.message || 'Failed to fetch service category' };
+    }
+  }
+
+  async createServiceCategory(category: Omit<Category, 'category_id'>): Promise<{ success: boolean; data?: Category; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('service_categories')
+        .insert([{
+          category_name: category.category_name,
+          category_description: category.description
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating service category:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('❌ Error in createServiceCategory:', error);
+      return { success: false, error: error.message || 'Failed to create service category' };
+    }
+  }
+
+  async updateServiceCategory(category: Category): Promise<{ success: boolean; data?: Category; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('service_categories')
+        .update({
+          category_name: category.category_name,
+          category_description: category.description
+        })
+        .eq('category_id', category.category_id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating service category:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error('❌ Error in updateServiceCategory:', error);
+      return { success: false, error: error.message || 'Failed to update service category' };
+    }
+  }
+
+  async deleteServiceCategory(categoryId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // First check if there are any services using this category
+      const { count, error: countError } = await supabase
+        .from('medical_services')
+        .select('*', { count: 'exact', head: true })
+        .eq('category_id', categoryId);
+
+      if (countError) {
+        console.error('❌ Error checking category usage:', countError);
+        return { success: false, error: countError.message };
+      }
+
+      if (count && count > 0) {
+        return { success: false, error: `Cannot delete category. It is being used by ${count} service(s).` };
+      }
+
+      const { error } = await supabase
+        .from('service_categories')
+        .delete()
+        .eq('category_id', categoryId);
+
+      if (error) {
+        console.error('❌ Error deleting service category:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Error in deleteServiceCategory:', error);
+      return { success: false, error: error.message || 'Failed to delete service category' };
+    }
   }
 
 
@@ -1460,8 +2017,8 @@ export class SupabaseService {
   // Admin appointment management methods (unified for both patient and guest appointments)
   async updateAppointment(appointmentId: string, appointmentData: Partial<any>, appointmentType?: 'patient' | 'guest', originalTable?: 'appointments' | 'guest_appointments'): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      const updateData = { ...appointmentData };
-      updateData.updated_at = new Date().toISOString();
+      const updateData: any = { ...appointmentData };
+      updateData['updated_at'] = new Date().toISOString();
 
       // Determine which table to update
       let tableName: string;
@@ -1476,17 +2033,17 @@ export class SupabaseService {
         idField = appointmentType === 'guest' ? 'guest_appointment_id' : 'appointment_id';
       }
 
-      // Remove fields that don't belong in the update
-      delete updateData.appointment_type;
-      delete updateData.original_table;
-      delete updateData.original_id;
-      delete updateData.display_name;
-      delete updateData.patient_name;
-      delete updateData.guest_name;
-      delete updateData.doctor_name;
-      delete updateData.category_name;
-      delete updateData.slot_date;
-      delete updateData.slot_time;
+      // Remove fields that don't belong in the update using bracket notation
+      delete updateData['appointment_type'];
+      delete updateData['original_table'];
+      delete updateData['original_id'];
+      delete updateData['display_name'];
+      delete updateData['patient_name'];
+      delete updateData['guest_name'];
+      delete updateData['doctor_name'];
+      delete updateData['category_name'];
+      delete updateData['slot_date'];
+      delete updateData['slot_time'];
 
       const { data, error } = await supabase
         .from(tableName)
@@ -1590,14 +2147,13 @@ export class SupabaseService {
       const stats = {
         total: data?.length || 0,
         pending: data?.filter(a => a.appointment_status === 'pending').length || 0,
-        confirmed: data?.filter(a => a.appointment_status === 'confirmed').length || 0,
+        in_progress: data?.filter(a => a.appointment_status === 'in_progress').length || 0,
         completed: data?.filter(a => a.appointment_status === 'completed').length || 0,
         cancelled: data?.filter(a => a.appointment_status === 'cancelled').length || 0,
-        no_show: data?.filter(a => a.appointment_status === 'no_show').length || 0,
         consultation: data?.filter(a => a.visit_type === 'consultation').length || 0,
-        follow_up: data?.filter(a => a.visit_type === 'follow_up').length || 0,
+        follow_up: data?.filter(a => a.visit_type === 'follow-up').length || 0,
         emergency: data?.filter(a => a.visit_type === 'emergency').length || 0,
-        routine_checkup: data?.filter(a => a.visit_type === 'routine_checkup').length || 0
+        routine: data?.filter(a => a.visit_type === 'routine').length || 0
       };
 
       return { success: true, data: stats };

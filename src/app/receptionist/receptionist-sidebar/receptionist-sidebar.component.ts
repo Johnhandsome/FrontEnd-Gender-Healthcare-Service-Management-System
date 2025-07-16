@@ -81,25 +81,25 @@ interface NavigationItem {
           </button>
 
           <button
-            (click)="quickAction('register-patient')"
+            (click)="quickAction('approve-pending')"
             class="w-full flex items-center px-4 py-3 text-sm font-medium text-emerald-700 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-md">
             <div class="w-8 h-8 bg-gradient-to-br from-emerald-200 to-teal-200 rounded-lg flex items-center justify-center mr-3">
               <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-              </svg>
-            </div>
-            Register Patient
-          </button>
-
-          <button
-            (click)="quickAction('check-in')"
-            class="w-full flex items-center px-4 py-3 text-sm font-medium text-blue-700 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-md">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-lg flex items-center justify-center mr-3">
-              <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
-            Patient Check-in
+            Approve Pending
+          </button>
+
+          <button
+            (click)="quickAction('process-payment')"
+            class="w-full flex items-center px-4 py-3 text-sm font-medium text-blue-700 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-md">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-lg flex items-center justify-center mr-3">
+              <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            Process Payment
           </button>
         </div>
       </div>
@@ -438,56 +438,31 @@ export class ReceptionistSidebarComponent implements OnInit {
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v4H8V5z"></path>
              </svg>`,
       route: '/receptionist/dashboard',
-      description: 'Overview & statistics'
+      description: 'Real-time overview'
     },
     {
-      name: 'Appointments',
+      name: 'Payment Management',
+      icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+             </svg>`,
+      route: '/receptionist/dashboard/payment-management',
+      description: 'Service billing & payments'
+    },
+    {
+      name: 'Appointment Management',
       icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
              </svg>`,
-      route: '/receptionist/dashboard/appointments',
-      description: 'Schedule & manage'
+      route: '/receptionist/dashboard/appointment-management',
+      description: 'Create & approve appointments'
     },
     {
-      name: 'Patient Registration',
-      icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-             </svg>`,
-      route: '/receptionist/dashboard/patient-registration',
-      description: 'Register new patients'
-    },
-    {
-      name: 'Patient Records',
+      name: 'Patient Management',
       icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
              </svg>`,
-      route: '/receptionist/dashboard/patient-records',
-      description: 'View patient files'
-    },
-    {
-      name: 'Doctor Schedule',
-      icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>
-             </svg>`,
-      route: '/receptionist/dashboard/doctor-schedule',
-      description: 'Doctor availability'
-    },
-    {
-      name: 'Reception Tasks',
-      icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-             </svg>`,
-      route: '/receptionist/dashboard/reception-tasks',
-      description: 'Daily tasks & check-ins'
-    },
-    {
-      name: 'Reports & Analytics',
-      icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-             </svg>`,
-      route: '/receptionist/dashboard/reports',
-      description: 'Performance metrics'
+      route: '/receptionist/dashboard/patient-management',
+      description: 'CRU patient records'
     }
   ];
 
@@ -502,16 +477,18 @@ export class ReceptionistSidebarComponent implements OnInit {
 
     switch (action) {
       case 'new-appointment':
-        this.router.navigate(['/receptionist/dashboard/appointments'], {
+        this.router.navigate(['/receptionist/dashboard/appointment-management'], {
           queryParams: { action: 'new' }
         });
         break;
-      case 'register-patient':
-        this.router.navigate(['/receptionist/dashboard/patient-registration']);
+      case 'approve-pending':
+        this.router.navigate(['/receptionist/dashboard/appointment-management'], {
+          queryParams: { action: 'approve' }
+        });
         break;
-      case 'check-in':
-        this.router.navigate(['/receptionist/dashboard/reception-tasks'], {
-          queryParams: { action: 'check-in' }
+      case 'process-payment':
+        this.router.navigate(['/receptionist/dashboard/payment-management'], {
+          queryParams: { action: 'process' }
         });
         break;
       default:

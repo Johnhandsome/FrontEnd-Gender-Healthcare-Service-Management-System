@@ -38,9 +38,16 @@ export class PatientManagementComponent implements OnInit {
   showViewModal = false;
   showEditModal = false;
   selectedPatient: Patient | null = null;
-  allergiesJson: string = '';
-  chronicConditionsJson: string = '';
-  pastSurgeriesJson: string = '';
+
+  // Enhanced medical information fields
+  allergiesList: string[] = [];
+  chronicConditionsList: string[] = [];
+  pastSurgeriesList: string[] = [];
+
+  // Input fields for adding new items
+  newAllergy: string = '';
+  newChronicCondition: string = '';
+  newPastSurgery: string = '';
 
   constructor(private supabaseService: SupabaseService) { }
 
@@ -314,9 +321,7 @@ export class PatientManagementComponent implements OnInit {
       case 'export':
         this.exportPatients(event.patientIds);
         break;
-      case 'status_update':
-        this.bulkStatusUpdate(event.patientIds);
-        break;
+
       case 'deactivate':
         await this.bulkDeactivatePatients(event.patientIds);
         break;
@@ -360,13 +365,7 @@ export class PatientManagementComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
-  /**
-   * Handle bulk status update
-   */
-  bulkStatusUpdate(patientIds: string[]): void {
-    // TODO: Implement bulk status update modal
-    console.log('Bulk status update for patients:', patientIds);
-  }
+
 
   /**
    * Bulk deactivate patients (soft delete)
@@ -460,15 +459,31 @@ export class PatientManagementComponent implements OnInit {
 
   openEditPatientModal(patient: Patient) {
     this.selectedPatient = { ...patient };
-    this.allergiesJson = this.stringifyJson(patient.allergies);
-    this.chronicConditionsJson = this.stringifyJson(patient.chronic_conditions);
-    this.pastSurgeriesJson = this.stringifyJson(patient.past_surgeries);
+
+    // Convert medical information to arrays for tag-based editing
+    this.allergiesList = this.convertToStringArray(patient.allergies);
+    this.chronicConditionsList = this.convertToStringArray(patient.chronic_conditions);
+    this.pastSurgeriesList = this.convertToStringArray(patient.past_surgeries);
+
+    // Clear input fields
+    this.newAllergy = '';
+    this.newChronicCondition = '';
+    this.newPastSurgery = '';
+
     this.showEditModal = true;
   }
 
   closeEditModal() {
     this.showEditModal = false;
     this.selectedPatient = null;
+
+    // Clear medical information arrays and input fields
+    this.allergiesList = [];
+    this.chronicConditionsList = [];
+    this.pastSurgeriesList = [];
+    this.newAllergy = '';
+    this.newChronicCondition = '';
+    this.newPastSurgery = '';
   }
 
   async updatePatient() {
@@ -499,34 +514,113 @@ export class PatientManagementComponent implements OnInit {
     return JSON.stringify(value);
   }
 
-  stringifyJson(value: Record<string, string> | string[] | string | null): string {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    return JSON.stringify(value, null, 2);
-  }
 
-  parseJson(value: string, field: keyof Patient) {
-  if (!this.selectedPatient) return;
 
-  // Type guard để kiểm tra field có phải là JSON field không
-  const jsonFields: (keyof Patient)[] = ['allergies', 'chronic_conditions', 'past_surgeries'];
+  // ============= ENHANCED MEDICAL INFORMATION METHODS ============= //
 
-  if (!jsonFields.includes(field)) {
-    console.warn(`Field ${field} is not a JSON field`);
-    return;
-  }
-
-  try {
-    const parsed = value ? JSON.parse(value) : null;
-    if (parsed === null || Array.isArray(parsed) || this.isObject(parsed)) {
-      // Type assertion với any để bypass type checking
-      (this.selectedPatient as any)[field] = parsed as Record<string, string> | string[] | null;
+  /**
+   * Convert medical information to string array for tag-based editing
+   */
+  convertToStringArray(value: Record<string, string> | string[] | string | null): string[] {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(item => item && item.trim());
+    if (typeof value === 'string') {
+      // Handle comma-separated or semicolon-separated values
+      return value.split(/[,;]/).map(item => item.trim()).filter(item => item);
     }
-  } catch {
-    console.warn(`Invalid JSON for ${field}: ${value}`);
-    (this.selectedPatient as any)[field] = null;
+    if (typeof value === 'object') {
+      // Convert object to array of "key: value" strings
+      return Object.entries(value).map(([key, val]) => `${key}: ${val}`).filter(item => item);
+    }
+    return [];
   }
-}
+
+  /**
+   * Add new allergy
+   */
+  addAllergy(): void {
+    if (this.newAllergy.trim()) {
+      this.allergiesList.push(this.newAllergy.trim());
+      this.newAllergy = '';
+      this.updatePatientMedicalField('allergies', this.allergiesList);
+    }
+  }
+
+  /**
+   * Remove allergy
+   */
+  removeAllergy(index: number): void {
+    this.allergiesList.splice(index, 1);
+    this.updatePatientMedicalField('allergies', this.allergiesList);
+  }
+
+  /**
+   * Add new chronic condition
+   */
+  addChronicCondition(): void {
+    if (this.newChronicCondition.trim()) {
+      this.chronicConditionsList.push(this.newChronicCondition.trim());
+      this.newChronicCondition = '';
+      this.updatePatientMedicalField('chronic_conditions', this.chronicConditionsList);
+    }
+  }
+
+  /**
+   * Remove chronic condition
+   */
+  removeChronicCondition(index: number): void {
+    this.chronicConditionsList.splice(index, 1);
+    this.updatePatientMedicalField('chronic_conditions', this.chronicConditionsList);
+  }
+
+  /**
+   * Add new past surgery
+   */
+  addPastSurgery(): void {
+    if (this.newPastSurgery.trim()) {
+      this.pastSurgeriesList.push(this.newPastSurgery.trim());
+      this.newPastSurgery = '';
+      this.updatePatientMedicalField('past_surgeries', this.pastSurgeriesList);
+    }
+  }
+
+  /**
+   * Remove past surgery
+   */
+  removePastSurgery(index: number): void {
+    this.pastSurgeriesList.splice(index, 1);
+    this.updatePatientMedicalField('past_surgeries', this.pastSurgeriesList);
+  }
+
+  /**
+   * Update patient medical field with array data
+   */
+  private updatePatientMedicalField(field: 'allergies' | 'chronic_conditions' | 'past_surgeries', data: string[]): void {
+    if (!this.selectedPatient) return;
+
+    // Store as array for easier handling
+    (this.selectedPatient as any)[field] = data.length > 0 ? data : null;
+  }
+
+  /**
+   * Handle Enter key press for adding items
+   */
+  onEnterKey(event: KeyboardEvent, type: 'allergy' | 'chronic' | 'surgery'): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      switch (type) {
+        case 'allergy':
+          this.addAllergy();
+          break;
+        case 'chronic':
+          this.addChronicCondition();
+          break;
+        case 'surgery':
+          this.addPastSurgery();
+          break;
+      }
+    }
+  }
 
 
 }

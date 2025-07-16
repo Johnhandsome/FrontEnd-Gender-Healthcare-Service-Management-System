@@ -38,7 +38,7 @@ interface Appointment {
               <p class="mt-2 text-gray-600">Schedule and manage patient appointments</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
-              <button 
+              <button
                 (click)="toggleView()"
                 class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,7 +46,7 @@ interface Appointment {
                 </svg>
                 {{ viewMode === 'list' ? 'Calendar View' : 'List View' }}
               </button>
-              <button 
+              <button
                 (click)="openNewAppointmentModal()"
                 class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium">
                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,15 +63,15 @@ interface Appointment {
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 [(ngModel)]="filters.date"
                 (change)="applyFilters()"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Doctor</label>
-              <select 
+              <select
                 [(ngModel)]="filters.doctor"
                 (change)="applyFilters()"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -83,7 +83,7 @@ interface Appointment {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select 
+              <select
                 [(ngModel)]="filters.status"
                 (change)="applyFilters()"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -96,8 +96,8 @@ interface Appointment {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 [(ngModel)]="filters.search"
                 (input)="applyFilters()"
                 placeholder="Patient name or phone"
@@ -116,7 +116,7 @@ interface Appointment {
           <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-semibold text-gray-900">Appointments ({{ filteredAppointments.length }})</h2>
           </div>
-          
+
           <div *ngIf="filteredAppointments.length === 0" class="p-8 text-center text-gray-500">
             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -125,7 +125,7 @@ interface Appointment {
           </div>
 
           <div *ngIf="filteredAppointments.length > 0" class="divide-y divide-gray-200">
-            <div *ngFor="let appointment of filteredAppointments" 
+            <div *ngFor="let appointment of filteredAppointments"
                  class="p-6 hover:bg-gray-50 transition-colors">
               <div class="flex items-center justify-between">
                 <div class="flex-1">
@@ -156,14 +156,14 @@ interface Appointment {
                     {{ appointment.appointment_status | titlecase }}
                   </span>
                   <div class="flex space-x-2">
-                    <button 
+                    <button
                       (click)="editAppointment(appointment)"
                       class="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg">
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     </button>
-                    <button 
+                    <button
                       (click)="deleteAppointment(appointment)"
                       class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg">
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,10 +203,10 @@ interface Appointment {
 export class AppointmentsComponent implements OnInit {
   loading = true;
   viewMode: 'list' | 'calendar' = 'list';
-  
+
   appointments: Appointment[] = [];
   filteredAppointments: Appointment[] = [];
-  
+
   filters = {
     date: '',
     doctor: '',
@@ -232,10 +232,10 @@ export class AppointmentsComponent implements OnInit {
   async loadAppointments(): Promise<void> {
     try {
       this.loading = true;
-      
+
       // Simulate API call with demo data
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       this.appointments = [
         {
           appointment_id: '1',
@@ -268,9 +268,9 @@ export class AppointmentsComponent implements OnInit {
           appointment_status: 'confirmed'
         }
       ];
-      
+
       this.filteredAppointments = [...this.appointments];
-      
+
     } catch (error) {
       console.error('❌ Error loading appointments:', error);
     } finally {
@@ -287,10 +287,10 @@ export class AppointmentsComponent implements OnInit {
       const matchesDate = !this.filters.date || appointment.appointment_date === this.filters.date;
       const matchesDoctor = !this.filters.doctor || appointment.doctor_name === this.filters.doctor;
       const matchesStatus = !this.filters.status || appointment.appointment_status === this.filters.status;
-      const matchesSearch = !this.filters.search || 
+      const matchesSearch = !this.filters.search ||
         appointment.patient_name.toLowerCase().includes(this.filters.search.toLowerCase()) ||
         appointment.patient_phone.includes(this.filters.search);
-      
+
       return matchesDate && matchesDoctor && matchesStatus && matchesSearch;
     });
   }
@@ -317,14 +317,14 @@ export class AppointmentsComponent implements OnInit {
 
   getStatusColor(status: string): string {
     switch (status.toLowerCase()) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case 'in_progress':
+        return 'bg-purple-100 text-purple-800';
       case 'completed':
         return 'bg-blue-100 text-blue-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

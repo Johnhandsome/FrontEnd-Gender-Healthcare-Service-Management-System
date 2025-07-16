@@ -164,154 +164,56 @@
           </tr>
           <tr class="border-b">
             <td class="py-2 px-4 font-medium text-gray-700" colspan="2">
-              <div class="font-medium text-gray-700 mb-2">Allergies</div>
-              <ng-container
-                *ngIf="
-                  selectedPatient.allergies &&
-                    isObject(selectedPatient.allergies);
-                  else allergiesText
-                "
-              >
-                <table class="min-w-full bg-white border">
-                  <thead>
-                    <tr>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-1/3"
-                      >
-                        Allergy
-                      </th>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-2/3"
-                      >
-                        Severity
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      *ngFor="let key of objectKeys(selectedPatient.allergies)"
-                    >
-                      <td
-                        class="py-2 px-4 border-b text-sm text-gray-700 capitalize"
-                      >
-                        {{ key }}
-                      </td>
-                      <td class="py-2 px-4 border-b text-sm text-gray-700">
-                        {{ selectedPatient.allergies[key] || "N/A" }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </ng-container>
-              <ng-template #allergiesText>
-                <div class="py-2 px-4">
-                  {{ formatJsonField(selectedPatient.allergies) }}
+              <div class="font-medium text-gray-700 mb-3">Allergies</div>
+              <div class="space-y-2">
+                <div *ngIf="convertToStringArray(selectedPatient.allergies).length > 0; else noAllergies" class="flex flex-wrap gap-2">
+                  <span
+                    *ngFor="let allergy of convertToStringArray(selectedPatient.allergies)"
+                    class="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full"
+                  >
+                    {{ allergy }}
+                  </span>
                 </div>
-              </ng-template>
-            </td>
-          </tr>
-          <tr class="border-b">
-            <td class="py-2 px-4 font-medium text-gray-700" colspan="2">
-              <div class="font-medium text-gray-700 mb-2">
-                Chronic Conditions
+                <ng-template #noAllergies>
+                  <div class="text-sm text-gray-500 italic">No allergies recorded</div>
+                </ng-template>
               </div>
-              <ng-container
-                *ngIf="
-                  selectedPatient.chronic_conditions &&
-                    isObject(selectedPatient.chronic_conditions);
-                  else conditionsText
-                "
-              >
-                <table class="min-w-full bg-white border">
-                  <thead>
-                    <tr>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-1/3"
-                      >
-                        Condition
-                      </th>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-2/3"
-                      >
-                        Details
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      *ngFor="
-                        let key of objectKeys(
-                          selectedPatient.chronic_conditions
-                        )
-                      "
-                    >
-                      <td
-                        class="py-2 px-4 border-b text-sm text-gray-700 capitalize"
-                      >
-                        {{ key }}
-                      </td>
-                      <td class="py-2 px-4 border-b text-sm text-gray-700">
-                        {{ selectedPatient.chronic_conditions[key] || "N/A" }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </ng-container>
-              <ng-template #conditionsText>
-                <div class="py-2 px-4">
-                  {{ formatJsonField(selectedPatient.chronic_conditions) }}
-                </div>
-              </ng-template>
             </td>
           </tr>
           <tr class="border-b">
             <td class="py-2 px-4 font-medium text-gray-700" colspan="2">
-              <div class="font-medium text-gray-700 mb-2">Past Surgeries</div>
-              <ng-container
-                *ngIf="
-                  selectedPatient.past_surgeries &&
-                    isObject(selectedPatient.past_surgeries);
-                  else surgeriesText
-                "
-              >
-                <table class="min-w-full bg-white border">
-                  <thead>
-                    <tr>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-1/3"
-                      >
-                        Surgery
-                      </th>
-                      <th
-                        class="py-2 px-4 border-b text-left text-sm font-medium text-gray-700 w-2/3"
-                      >
-                        Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      *ngFor="
-                        let key of objectKeys(selectedPatient.past_surgeries)
-                      "
-                    >
-                      <td
-                        class="py-2 px-4 border-b text-sm text-gray-700 capitalize"
-                      >
-                        {{ key }}
-                      </td>
-                      <td class="py-2 px-4 border-b text-sm text-gray-700">
-                        {{ selectedPatient.past_surgeries[key] || "N/A" }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </ng-container>
-              <ng-template #surgeriesText>
-                <div class="py-2 px-4">
-                  {{ formatJsonField(selectedPatient.past_surgeries) }}
+              <div class="font-medium text-gray-700 mb-3">Chronic Conditions</div>
+              <div class="space-y-2">
+                <div *ngIf="convertToStringArray(selectedPatient.chronic_conditions).length > 0; else noConditions" class="flex flex-wrap gap-2">
+                  <span
+                    *ngFor="let condition of convertToStringArray(selectedPatient.chronic_conditions)"
+                    class="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full"
+                  >
+                    {{ condition }}
+                  </span>
                 </div>
-              </ng-template>
+                <ng-template #noConditions>
+                  <div class="text-sm text-gray-500 italic">No chronic conditions recorded</div>
+                </ng-template>
+              </div>
+            </td>
+          </tr>
+          <tr class="border-b">
+            <td class="py-2 px-4 font-medium text-gray-700" colspan="2">
+              <div class="font-medium text-gray-700 mb-3">Past Surgeries</div>
+              <div class="space-y-2">
+                <div *ngIf="convertToStringArray(selectedPatient.past_surgeries).length > 0; else noSurgeries" class="flex flex-wrap gap-2">
+                  <span
+                    *ngFor="let surgery of convertToStringArray(selectedPatient.past_surgeries)"
+                    class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                  >
+                    {{ surgery }}
+                  </span>
+                </div>
+                <ng-template #noSurgeries>
+                  <div class="text-sm text-gray-500 italic">No past surgeries recorded</div>
+                </ng-template>
+              </div>
             </td>
           </tr>
           <tr class="border-b">
@@ -449,12 +351,51 @@
           <tr class="border-b">
             <td class="py-2 px-4 font-medium text-gray-700">Allergies</td>
             <td class="py-2 px-4">
-              <textarea
-                [ngModel]="stringifyJson(selectedPatient.allergies)"
-                (ngModelChange)="parseJson($event, 'allergies')"
-                class="w-full p-2 border rounded-md"
-                rows="4"
-              ></textarea>
+              <!-- Tag-based Allergies Input -->
+              <div class="space-y-3">
+                <!-- Add New Allergy -->
+                <div class="flex items-center space-x-2">
+                  <input
+                    [(ngModel)]="newAllergy"
+                    (keydown)="onEnterKey($event, 'allergy')"
+                    type="text"
+                    placeholder="Add new allergy..."
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-sm"
+                  />
+                  <button
+                    (click)="addAllergy()"
+                    [disabled]="!newAllergy.trim()"
+                    class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Allergies Tags -->
+                <div class="flex flex-wrap gap-2" *ngIf="allergiesList.length > 0">
+                  <span
+                    *ngFor="let allergy of allergiesList; let i = index"
+                    class="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full"
+                  >
+                    {{ allergy }}
+                    <button
+                      (click)="removeAllergy(i)"
+                      class="ml-2 text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="allergiesList.length === 0" class="text-sm text-gray-500 italic">
+                  No allergies recorded
+                </div>
+              </div>
             </td>
           </tr>
           <tr class="border-b">
@@ -462,23 +403,101 @@
               Chronic Conditions
             </td>
             <td class="py-2 px-4">
-              <textarea
-                [ngModel]="stringifyJson(selectedPatient.chronic_conditions)"
-                (ngModelChange)="parseJson($event, 'chronic_conditions')"
-                class="w-full p-2 border rounded-md"
-                rows="4"
-              ></textarea>
+              <!-- Tag-based Chronic Conditions Input -->
+              <div class="space-y-3">
+                <!-- Add New Chronic Condition -->
+                <div class="flex items-center space-x-2">
+                  <input
+                    [(ngModel)]="newChronicCondition"
+                    (keydown)="onEnterKey($event, 'chronic')"
+                    type="text"
+                    placeholder="Add new chronic condition..."
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-sm"
+                  />
+                  <button
+                    (click)="addChronicCondition()"
+                    [disabled]="!newChronicCondition.trim()"
+                    class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Chronic Conditions Tags -->
+                <div class="flex flex-wrap gap-2" *ngIf="chronicConditionsList.length > 0">
+                  <span
+                    *ngFor="let condition of chronicConditionsList; let i = index"
+                    class="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full"
+                  >
+                    {{ condition }}
+                    <button
+                      (click)="removeChronicCondition(i)"
+                      class="ml-2 text-orange-600 hover:text-orange-800 transition-colors"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="chronicConditionsList.length === 0" class="text-sm text-gray-500 italic">
+                  No chronic conditions recorded
+                </div>
+              </div>
             </td>
           </tr>
           <tr class="border-b">
             <td class="py-2 px-4 font-medium text-gray-700">Past Surgeries</td>
             <td class="py-2 px-4">
-              <textarea
-                [ngModel]="stringifyJson(selectedPatient.past_surgeries)"
-                (ngModelChange)="parseJson($event, 'past_surgeries')"
-                class="w-full p-2 border rounded-md"
-                rows="4"
-              ></textarea>
+              <!-- Tag-based Past Surgeries Input -->
+              <div class="space-y-3">
+                <!-- Add New Past Surgery -->
+                <div class="flex items-center space-x-2">
+                  <input
+                    [(ngModel)]="newPastSurgery"
+                    (keydown)="onEnterKey($event, 'surgery')"
+                    type="text"
+                    placeholder="Add new past surgery..."
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-sm"
+                  />
+                  <button
+                    (click)="addPastSurgery()"
+                    [disabled]="!newPastSurgery.trim()"
+                    class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Past Surgeries Tags -->
+                <div class="flex flex-wrap gap-2" *ngIf="pastSurgeriesList.length > 0">
+                  <span
+                    *ngFor="let surgery of pastSurgeriesList; let i = index"
+                    class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                  >
+                    {{ surgery }}
+                    <button
+                      (click)="removePastSurgery(i)"
+                      class="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="pastSurgeriesList.length === 0" class="text-sm text-gray-500 italic">
+                  No past surgeries recorded
+                </div>
+              </div>
             </td>
           </tr>
           <tr class="border-b">

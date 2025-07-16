@@ -38,8 +38,15 @@ export class AppointmentManagementComponent implements OnInit {
   // Modal states
   showViewModal = false;
   showEditModal = false;
-  showCreateModal = false;
   selectedAppointment: AdminAppointment | null = null;
+
+  // Edit modal states
+  isUpdating = false;
+  updateError: string | null = null;
+  updateSuccess: string | null = null;
+
+  // Validation properties
+  validationErrors: { [key: string]: string } = {};
 
   constructor(private supabaseService: SupabaseService) { }
 
@@ -47,6 +54,8 @@ export class AppointmentManagementComponent implements OnInit {
     await this.loadAppointments();
     await this.loadDoctors();
   }
+
+
 
   async loadAppointments() {
     this.isLoading = true;
@@ -153,6 +162,11 @@ export class AppointmentManagementComponent implements OnInit {
 
       // Doctor filter
       if (filters.doctor && appointment.doctor_id !== filters.doctor) {
+        return false;
+      }
+
+      // Appointment type filter
+      if (filters.appointmentType && appointment.appointment_type !== filters.appointmentType) {
         return false;
       }
 
@@ -284,51 +298,95 @@ export class AppointmentManagementComponent implements OnInit {
 
   openEditAppointmentModal(appointment: AdminAppointment): void {
     this.selectedAppointment = { ...appointment };
+    this.updateError = null;
+    this.isUpdating = false;
     this.showEditModal = true;
   }
 
   closeEditModal(): void {
     this.showEditModal = false;
     this.selectedAppointment = null;
+    this.updateError = null;
+    this.updateSuccess = null;
+    this.validationErrors = {};
+    this.isUpdating = false;
   }
 
-  openCreateAppointmentModal(): void {
-    this.showCreateModal = true;
-  }
 
-  closeCreateModal(): void {
-    this.showCreateModal = false;
-  }
 
   async onUpdateAppointment(appointmentData: Partial<AdminAppointment>) {
     if (!this.selectedAppointment) return;
 
+    // Validate appointment data
+    const appointmentToValidate = { ...this.selectedAppointment, ...appointmentData };
+    if (!this.validateAppointmentData(appointmentToValidate)) {
+      this.updateError = 'Please fix the validation errors before saving.';
+      return;
+    }
+
+    this.isUpdating = true;
+    this.updateError = null;
+    this.updateSuccess = null;
+
     try {
+      // Prepare update data with only editable fields
+      const updateData: any = {
+        visit_type: appointmentData.visit_type,
+        appointment_status: appointmentData.appointment_status,
+        schedule: appointmentData.schedule,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add optional fields only if they have values
+      if (appointmentData.message) {
+        updateData.message = appointmentData.message;
+      }
+      if (appointmentData.appointment_date) {
+        updateData.appointment_date = appointmentData.appointment_date;
+      }
+      if (appointmentData.appointment_time) {
+        updateData.appointment_time = appointmentData.appointment_time;
+      }
+
       const result = await this.supabaseService.updateAppointment(
         this.selectedAppointment.original_id || this.selectedAppointment.appointment_id,
-        appointmentData,
+        updateData,
         this.selectedAppointment.appointment_type,
         this.selectedAppointment.original_table
       );
 
-      if (result.success) {
+      if (result.success && 'data' in result && result.data) {
         // Update local data
         const index = this.appointments.findIndex(a =>
           a.appointment_id === this.selectedAppointment!.appointment_id ||
           a.original_id === this.selectedAppointment!.original_id
         );
         if (index !== -1) {
-          this.appointments[index] = { ...this.appointments[index], ...result.data };
+          // Update only the fields that were actually updated
+          Object.keys(updateData).forEach(key => {
+            if (updateData[key] !== undefined) {
+              (this.appointments[index] as any)[key] = updateData[key];
+            }
+          });
           this.applyFilters(this.currentFilters);
         }
-        this.closeEditModal();
+
+        // Show success message
+        this.updateSuccess = 'Appointment updated successfully!';
+
+        // Close modal after a brief delay to show success message
+        setTimeout(() => {
+          this.closeEditModal();
+        }, 1500);
       } else {
+        this.updateError = result.error || 'Failed to update appointment. Please try again.';
         console.error('Error updating appointment:', result.error);
-        // Show error message to user
       }
-    } catch (error) {
+    } catch (error: any) {
+      this.updateError = error.message || 'An unexpected error occurred. Please try again.';
       console.error('Error updating appointment:', error);
-      // Show error message to user
+    } finally {
+      this.isUpdating = false;
     }
   }
 
@@ -383,14 +441,14 @@ export class AppointmentManagementComponent implements OnInit {
               appointment.original_table
             );
           }
-          return Promise.resolve({ success: false, error: 'Appointment not found' });
+          return Promise.resolve({ success: false, error: 'Appointment not found', data: undefined });
         });
 
         const results = await Promise.all(updatePromises);
 
         // Update local data for successful updates
         results.forEach((result, index) => {
-          if (result.success) {
+          if (result.success && 'data' in result && result.data) {
             const appointmentIndex = this.appointments.findIndex((a: AdminAppointment) =>
               a.appointment_id === appointmentIds[index] || a.original_id === appointmentIds[index]
             );
@@ -503,7 +561,8 @@ export class AppointmentManagementComponent implements OnInit {
       status: '',
       visitType: '',
       doctor: '',
-      dateRange: ''
+      dateRange: '',
+      appointmentType: ''
     };
     this.applyFilters(this.currentFilters);
   }
@@ -554,5 +613,63 @@ export class AppointmentManagementComponent implements OnInit {
     }
 
     return visiblePages.filter(page => page > 0); // Remove ellipsis for now
+  }
+
+  // Validation methods
+  validateAppointmentData(appointment: AdminAppointment): boolean {
+    this.validationErrors = {};
+    let isValid = true;
+
+    // Validate appointment date
+    if (!appointment.appointment_date) {
+      this.validationErrors['appointment_date'] = 'Appointment date is required';
+      isValid = false;
+    } else {
+      const appointmentDate = new Date(appointment.appointment_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (appointmentDate < today) {
+        this.validationErrors['appointment_date'] = 'Appointment date cannot be in the past';
+        isValid = false;
+      }
+    }
+
+    // Validate appointment time
+    if (!appointment.appointment_time) {
+      this.validationErrors['appointment_time'] = 'Appointment time is required';
+      isValid = false;
+    } else {
+      // Validate time format (HH:MM)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(appointment.appointment_time)) {
+        this.validationErrors['appointment_time'] = 'Please enter a valid time format (HH:MM)';
+        isValid = false;
+      }
+    }
+
+    // Validate visit type
+    if (!appointment.visit_type) {
+      this.validationErrors['visit_type'] = 'Visit type is required';
+      isValid = false;
+    }
+
+    // Validate appointment status
+    if (!appointment.appointment_status) {
+      this.validationErrors['appointment_status'] = 'Appointment status is required';
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
+  // Get validation error for a specific field
+  getValidationError(field: string): string | null {
+    return this.validationErrors[field] || null;
+  }
+
+  // Check if a field has validation error
+  hasValidationError(field: string): boolean {
+    return !!this.validationErrors[field];
   }
 }

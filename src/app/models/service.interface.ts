@@ -13,4 +13,5 @@ export interface Service {
   is_active: boolean;
   image_link: string | null;
   excerpt: string | null;
+  category_name?: string; // Added from JOIN query for display purposes
 }

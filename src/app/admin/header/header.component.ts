@@ -11,15 +11,8 @@ import { Router } from '@angular/router';
 export class HeaderComponent implements OnInit {
   private router = inject(Router);
 
-  showNotificationMenu: boolean = false;
   showProfileMenu: boolean = false;
   adminName: string = 'Administrator';
-  notifications: string[] = [
-    'New staff member registered',
-    'Patient appointment scheduled',
-    'System backup completed',
-    'Monthly report generated'
-  ];
 
   ngOnInit() {
     // Get admin name from localStorage
@@ -33,23 +26,15 @@ export class HeaderComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     const target = event.target as HTMLElement;
-    const clickedInside = target.closest('.profile-dropdown') || target.closest('.notification-dropdown') ||
-                         target.closest('.profile-btn') || target.closest('.notification-btn');
+    const clickedInside = target.closest('.profile-dropdown') || target.closest('.profile-btn');
 
     if (!clickedInside) {
       this.showProfileMenu = false;
-      this.showNotificationMenu = false;
     }
-  }
-
-  toggleNotificationMenu() {
-    this.showNotificationMenu = !this.showNotificationMenu;
-    this.showProfileMenu = false; // Close profile menu if open
   }
 
   toggleProfileMenu() {
     this.showProfileMenu = !this.showProfileMenu;
-    this.showNotificationMenu = false; // Close notification menu if open
   }
 
   async logout() {
@@ -63,9 +48,8 @@ export class HeaderComponent implements OnInit {
 
     console.log('✅ Session data cleared, redirecting to login');
 
-    // Close all open menus
+    // Close profile menu
     this.showProfileMenu = false;
-    this.showNotificationMenu = false;
 
     // Redirect to login
     this.router.navigate(['/login']).then(success => {

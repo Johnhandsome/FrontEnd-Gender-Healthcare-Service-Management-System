@@ -76,17 +76,16 @@ export interface DisplayAppointment {
 // Enums
 export enum VisitType {
   CONSULTATION = 'consultation',
-  FOLLOW_UP = 'follow_up',
+  FOLLOW_UP = 'follow-up',
   EMERGENCY = 'emergency',
-  ROUTINE_CHECKUP = 'routine_checkup'
+  ROUTINE = 'routine'
 }
 
 export enum ProcessStatus {
   PENDING = 'pending',
-  CONFIRMED = 'confirmed',
+  IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  NO_SHOW = 'no_show'
+  CANCELLED = 'cancelled'
 }
 
 export enum ScheduleEnum {
@@ -114,6 +113,7 @@ export interface CreateAppointmentRequest {
 export interface UpdateAppointmentRequest {
   appointment_id: string;
   appointment_status?: ProcessStatus;
+  visit_type?: VisitType;
   message?: string;
   appointment_date?: string;
   appointment_time?: string;
